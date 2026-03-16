@@ -6,9 +6,20 @@ weight: 10
 
 This guide describes how to expose a Keycloak instance externally via Kubernetes Ingress with TLS encryption enabled, which is required for production deployments.
 
+## TLS Configuration Modes
+
+Alauda Build of Keycloak supports two distinct TLS modes. Choose the one that matches your infrastructure:
+
+| Mode | Field | Description |
+|:-----|:------|:------------|
+| **TLS at the Keycloak Pod** | `spec.http.tlsSecret` | Keycloak itself terminates TLS. Traffic between the client and the Pod is encrypted end-to-end. |
+| **TLS at the Ingress** | `spec.ingress.tlsSecret` | The Ingress controller terminates TLS. Keycloak can serve plain HTTP internally (set `spec.http.httpEnabled: true`). |
+
+This guide demonstrates the **Ingress TLS** mode (recommended for most Kubernetes environments).
+
 ## Prerequisites
 
-- A running Keycloak instance (see [Install](../installation.mdx)).
+- A running Keycloak instance (see [Install](../install.mdx)).
 - A valid TLS certificate and private key for the target hostname.
 - An Ingress controller (for example, NGINX) deployed in the cluster.
 

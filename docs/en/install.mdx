@@ -1,5 +1,5 @@
 ---
-toc: false
+weight: 15
 ---
 
 # Install
@@ -37,4 +37,34 @@ Before installing Alauda Build of Keycloak, ensure the following:
   </Tab>
 </Tabs>
 
+<Directive type="warning" title="Use Manual Upgrade Strategy">
+Set the upgrade strategy to **Manual** for production environments. When set to Automatic, OLM upgrades the Operator immediately upon a new release, which can trigger unintended Keycloak version upgrades and database schema migrations. Database schema changes cannot be rolled back, making recovery from a failed automatic upgrade difficult.
+</Directive>
 
+## Verifying the Installation
+
+After installation, verify that the Operator Pod is running:
+
+```bash
+kubectl get pods -n <operator-namespace> -l app.kubernetes.io/name=keycloak-operator
+```
+
+Expected output:
+
+```
+NAME                                READY   STATUS    RESTARTS   AGE
+keycloak-operator-xxxxxxxxx-xxxxx   1/1     Running   0          2m
+```
+
+Verify the CRDs were installed:
+
+```bash
+kubectl get crd | grep keycloak
+```
+
+Expected output:
+
+```
+keycloakrealmimports.k8s.keycloak.org   ...
+keycloaks.k8s.keycloak.org              ...
+```

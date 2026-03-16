@@ -10,14 +10,12 @@ This document provides the upgrade path principles and supported version compati
 
 ## Compatibility Matrix
 
-The table below lists supported versions of Alauda Build of Keycloak and its key components:
+The table below lists supported versions of Alauda Build of Keycloak and its key components. For version-specific changes, new features, and deprecations, see the **[Release Notes](./release_notes.mdx)**.
 
 | Alauda Build of Keycloak Version | Keycloak Version | Kubernetes Version |
 |:--------------------------------:|:----------------:|:------------------:|
-| v26.4.7-20260121113811 | 26.4.7-20260121113811 | 1.25+ |
-| v21.0.0 | 21.x | 1.25+ |
+| v26.4.7-20260121113811 | 26.4.7 | 1.25+ |
 
-For version-specific changes, new features, and deprecations, see the **[Release Notes](./release_notes.mdx)**.
 
 ## Prerequisites
 
@@ -40,11 +38,13 @@ kubectl get keycloak -A -o custom-columns="NAME:.metadata.name,NAMESPACE:.metada
 
 Upgrade step-by-step through consecutive versions to ensure compatibility.
 
-- **Example**: `v21.0.0 → v26.4.7-20260121113811`
-
 ### Patch-Level Upgrade
 
 Upgrades between patch versions within the same minor version are fully compatible and can be performed directly without additional migration steps.
+
+<Directive type="danger" title="No Rollback After Upgrade">
+Once the Operator upgrades and applies database schema migrations, **downgrading to the previous Keycloak version is not supported**. The database schema is updated during the upgrade process and is not backward compatible. Always back up the PostgreSQL database before upgrading.
+</Directive>
 
 ## Upgrade Procedure
 
@@ -74,5 +74,6 @@ Upgrades between patch versions within the same minor version are fully compatib
 
 Alauda Build of Keycloak executes upgrades based on the configured upgrade strategy in the Operator subscription:
 
-- **Automatic**: Auto-upgrades are triggered immediately upon detecting a new Operator version in the channel.
+- **Automatic**: Auto-upgrades are triggered immediately upon detecting a new Operator version in the channel. **Not recommended for production** — automatic upgrades bypass manual review of release notes and database migration changes.
 - **Manual**: Requires manual approval before initiating the upgrade process. This is the recommended strategy for production environments.
+

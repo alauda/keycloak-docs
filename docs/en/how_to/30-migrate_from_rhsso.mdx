@@ -88,6 +88,11 @@ kubectl exec -it <keycloak-pod-name> -n <namespace> -- /bin/bash
   --override true
 ```
 
+<Directive type="warning" title="Override Mode">
+The `--override true` flag replaces any existing Realm with the same name in the target Keycloak instance. Remove this flag if you want the import to fail when a conflicting Realm exists, preserving the current data.
+</Directive>
+
+
 ## Step 4: Verify the Migration
 
 After the import completes, verify that all data was migrated correctly:
