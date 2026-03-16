@@ -1,0 +1,119 @@
+---
+weight: 30
+---
+
+# Migrate from Red Hat Single Sign-On to Keycloak
+
+This guide describes how to migrate identity data from Red Hat Single Sign-On (RH-SSO) 7.x running on OpenShift to Alauda Build of Keycloak running on Kubernetes.
+
+## Overview
+
+Red Hat Single Sign-On (RH-SSO) 7.x is a commercial distribution developed by Red Hat based on the Keycloak Community Edition. The two are fully compatible in core data model and storage structure.
+
+This migration uses the officially recommended export/import mechanism, which migrates the following data completely:
+
+- Realm configurations
+- Users (including credentials and status)
+- Realm Roles and Client Roles
+- Clients and their permission mappings
+- Composite roles and built-in administrative permissions
+
+### Migration Flow
+
+```
+RH-SSO (OpenShift)
+   ↓ Export as JSON file
+Local machine
+   ↓ Copy the migration file
+Keycloak (Kubernetes)
+   ↓ Import JSON file
+Migration complete
+```
+
+## Prerequisites
+
+- Access to the RH-SSO Pod on OpenShift with `oc rsh` permissions.
+- A running Alauda Build of Keycloak instance on Kubernetes.
+- `kubectl` access to the target Kubernetes cluster.
+- Sufficient disk space on the local machine for the exported JSON file.
+
+## Step 1: Export Data from RH-SSO
+
+<Directive type="warning" title="Service Impact">
+The export command starts a secondary standalone server process on an offset port. It does not interrupt the running RH-SSO service, but plan the operation during a low-traffic window to minimize risk.
+</Directive>
+
+Connect to the RH-SSO Pod and run the export command:
+
+```bash
+# Connect to the RH-SSO Pod
+oc rsh <rh-sso-pod-name>
+
+# Run the export command inside the Pod
+/opt/eap/bin/standalone.sh \
+  -c standalone-openshift.xml \
+  -Dkeycloak.migration.action=export \
+  -Dkeycloak.migration.provider=singleFile \
+  -Dkeycloak.migration.file=/tmp/sso-export.json \
+  -Dkeycloak.migration.usersExportStrategy=REALM_FILE \
+  -Djboss.socket.binding.port-offset=502
+```
+
+Wait for the export to complete. The process prints log output and then exits. The exported file is saved to `/tmp/sso-export.json` inside the Pod.
+
+## Step 2: Copy the Export File
+
+Copy the export file from the RH-SSO Pod to your local machine, then to the Keycloak Pod:
+
+```bash
+# Copy from RH-SSO Pod (OpenShift) to local machine
+oc cp <rh-sso-pod-name>:/tmp/sso-export.json /tmp/sso-export.json
+
+# Copy from local machine to Keycloak Pod (Kubernetes)
+kubectl cp /tmp/sso-export.json \
+  <namespace>/<keycloak-pod-name>:/tmp/sso-export.json
+```
+
+## Step 3: Import Data into Keycloak
+
+Connect to the Keycloak Pod and run the import command:
+
+```bash
+# Connect to the Keycloak Pod
+kubectl exec -it <keycloak-pod-name> -n <namespace> -- /bin/bash
+
+# Run the import command inside the Pod
+/opt/keycloak/bin/kc.sh import \
+  --file /tmp/sso-export.json \
+  --override true
+```
+
+## Step 4: Verify the Migration
+
+After the import completes, verify that all data was migrated correctly:
+
+1. Log in to the Keycloak Admin Console.
+2. Confirm that the imported Realm(s) appear in the Realm dropdown.
+3. Verify the following in each imported Realm:
+   - User count matches the source RH-SSO
+   - Client configurations are intact
+   - Role assignments are correct
+   - Composite roles and permission mappings are preserved
+
+```bash
+# Check imported Realms
+kubectl exec -it <keycloak-pod-name> -n <namespace> -- \
+  /opt/keycloak/bin/kc.sh show-config
+```
+
+## Notes
+
+- **Import Success Indicator**: After executing the import command, the log prints `Realm '<realm-name>' imported` to confirm successful import. A final `ERROR: Address already in use` message is a port conflict from the import process and does not affect the data import result.
+- **Credential Compatibility**: RH-SSO 7.x and Keycloak 26.x use compatible credential storage formats. User passwords are migrated and remain valid after import.
+- **Client Secrets**: Client secrets are included in the export file. Verify they are preserved after import.
+- **Override Mode**: The `--override true` flag replaces any existing Realm with the same name. Remove this flag if you want the import to fail when a conflicting Realm exists.
+
+## Reference Documentation
+
+- [RH-SSO 7.6 Export/Import Documentation](https://docs.redhat.com/en/documentation/red_hat_single_sign-on/7.6/html/server_administration_guide/assembly-exporting-importing_server_administration_guide)
+- [Keycloak Import/Export Documentation](https://www.keycloak.org/server/importExport)

@@ -1,0 +1,69 @@
+---
+weight: 10
+author: "your-email@domain.com"
+category: "howto"
+queries:
+  - how to [action]
+  - [task name] guide
+---
+
+{/* reference-start#how_to_template */}
+
+# [Task Title: Usually Starting with a Verb]
+
+{/* Introduction: Briefly describe what the user will achieve and why it matters. */}
+## Introduction
+
+[Brief overview of the task and the value it provides to the user.]
+
+{/* Scenarios: Describe typical use cases or problems this task solves. */}
+## Scenarios
+
+- [Scenario 1: Describe a typical environment or trigger.]
+- [Scenario 2: Describe an alternative use case.]
+
+{/* Prerequisites: List all requirements, permissions, or tools needed before starting. */}
+## Prerequisites
+
+Before you begin, ensure the following conditions are met:
+
+- [Requirement 1: e.g., <Term name="global_cluster" /> administrator permissions]
+- [Requirement 2: e.g., A running instance of <Term name="product" />]
+
+## Steps
+
+{/* Use the <Steps> component for all sequential operations. Ensure each step is actionable and includes expected output if necessary. */}
+<Steps>
+  ### [First Step Title]
+
+  [Detailed action description. For CLI tasks, specify the tool and context.]
+
+  ```bash
+  # Example command
+  kubectl apply -f <filename.yaml>
+  ```
+
+  | Parameter | Description |
+  | :--- | :--- |
+  | [Param Name] | [Usage and requirements] |
+
+  ### [Second Step Title]
+
+  [Detailed action description]
+</Steps>
+
+## Verification
+{/* Explain how the user can verify that the task was successful. Use CLI commands where possible. */}
+
+1. Run the following command to check the status:
+   ```bash
+   kubectl get [resource]
+   ```
+2. Confirm the output shows `[Expected Status]`.
+
+## Next Steps
+{/* Provide links to related tasks or advanced configurations. */}
+
+- [Related Task Name](./path/to/document.mdx)
+
+{/* reference-end */}

@@ -1,0 +1,70 @@
+---
+weight: 10
+---
+
+# Introduction
+
+## Keycloak Introduction
+
+**Keycloak** is an open-source, enterprise-grade Identity and Access Management (IAM) solution led by Red Hat. It provides unified identity authentication, authorization, and user management capabilities for applications, APIs, and microservices, supporting a variety of mainstream identity authentication protocols. Its core design emphasizes centralized identity control, high security, scalability, and cloud-native adaptability.
+
+### Key Features
+
+1. **Modular Architecture**
+   Adopts a modular, microservice-friendly architecture, supports cluster deployment and horizontal scaling, with a complete high-availability design and data synchronization mechanisms.
+
+2. **Identity Authentication Protocols**
+   Fully supports mainstream identity protocols including OpenID Connect (OIDC), SAML 2.0, and OAuth 2.0, compatible with various client applications (web, mobile, API).
+
+3. **Security**
+   Built-in Multi-Factor Authentication (MFA), Single Sign-On (SSO), identity federation, and fine-grained permission control. Supports password policy management, LDAP/Active Directory integration, key rotation, and encrypted storage.
+
+4. **Integration Capabilities**
+   Provides rich APIs and client adapters for integration with applications built on Java, Python, Node.js, and other technology stacks. Supports custom authentication flows and user storage adapters.
+
+5. **Cloud-Native Support**
+   Deeply integrated with Docker and Kubernetes. Supports containerized deployment and provides an official Operator to simplify deployment, operations, and scaling in Kubernetes environments.
+
+### Typical Use Cases
+
+- **Enterprise Single Sign-On (SSO)**: Provides unified identity authentication for internal enterprise systems such as ERP, CRM, and OA, enabling users to access multiple systems with a single login.
+- **Cloud-Native Application Identity Control**: Provides API authorization and inter-service identity authentication for Kubernetes microservices and serverless applications.
+- **External User Identity Management**: Handles user registration, login, and permission management for B2C and B2B platforms, supporting social login (Google, GitHub) and third-party identity federation.
+- **Legacy System Modernization**: Replaces outdated identity authentication systems by providing standardized identity interfaces for legacy applications and enabling smooth migration to modern identity management architecture.
+
+## Alauda Build of Keycloak Introduction
+
+**Alauda Build of Keycloak** is a deeply optimized distribution of Keycloak developed on Kubernetes, providing full lifecycle management of Keycloak instances in Kubernetes clusters through a controller (Operator). It extends the Kubernetes API to provide a declarative configuration approach, automating the operation and maintenance of Keycloak, allowing users to deploy and manage identity and access management in a cloud-native manner.
+
+### Key Features
+
+1. **Kubernetes-Native Operator**
+   Manages the full lifecycle of Keycloak instances through Kubernetes Custom Resource Definitions (CRDs), supporting declarative configuration and automated reconciliation.
+
+2. **Realm Import via CRD**
+   Supports importing Realm configurations declaratively using the `KeycloakRealmImport` CRD, enabling GitOps-friendly identity configuration management.
+
+3. **High Availability**
+   Supports multi-instance deployment with configurable replica counts, ensuring service continuity through automatic failover.
+
+4. **Flexible Database Support**
+   Supports PostgreSQL and other JDBC-compatible databases through configurable database connection settings managed via Kubernetes Secrets.
+
+5. **TLS and Ingress Management**
+   Provides built-in support for TLS certificate configuration and Ingress exposure, with flexible options for both internal cluster access and external hostname-based routing.
+
+6. **Security Hardening**
+   Supports Kubernetes security context constraints, including non-root execution, capability dropping, and seccomp profiles, aligned with enterprise security requirements.
+
+## Keycloak vs Red Hat Single Sign-On (RH-SSO)
+
+| Category | Keycloak | Red Hat Single Sign-On (RH-SSO) |
+|:---------|:---------|:--------------------------------|
+| **Maintainer** | Community (Red Hat engineers + community contributors) | Red Hat Commercial Team |
+| **Release Cycle** | Rapid iteration with frequent updates, prioritizing new technical features | Slow iteration, strictly tested for enterprise stability |
+| **Support Lifecycle** | Short (typically 6–12 months per version) | Up to 7+ years of commercial support (including security patches and bug fixes) |
+| **Stability** | May include experimental features; stability varies by scenario | Enterprise-grade stability, verified across mainstream enterprise systems |
+| **Features** | Covers core identity management functions, including some experimental features | Stable feature set with additional enterprise enhancements (advanced monitoring, exclusive support tools) |
+| **Documentation and Support** | Community documentation, no official SLA; issues resolved through community discussions | Red Hat official documentation and knowledge base with SLA-level commercial support |
+| **License** | Apache License 2.0 (open source and free) | Requires Red Hat commercial subscription |
+| **Reference** | [Keycloak Official Documentation](https://www.keycloak.org/documentation) | [Red Hat Single Sign-On Documentation](https://docs.redhat.com/en/documentation/red_hat_single_sign-on/7.6) |

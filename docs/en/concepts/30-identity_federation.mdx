@@ -1,0 +1,82 @@
+---
+weight: 30
+---
+
+# Identity Federation
+
+## What Is Identity Federation
+
+**Identity Federation** allows Keycloak to delegate user authentication to an external identity source rather than managing credentials internally. Keycloak acts as a broker: it authenticates users against an external system and then issues its own tokens to client applications.
+
+This enables organizations to:
+
+- Reuse existing corporate identity stores (LDAP, Active Directory) without migrating users to Keycloak.
+- Allow users to log in with social accounts (Google, GitHub, Microsoft) or enterprise SSO systems.
+- Connect multiple identity domains under a single Keycloak Realm.
+
+## User Federation (LDAP / Active Directory)
+
+**User Federation** connects Keycloak to an existing user directory such as LDAP or Microsoft Active Directory. Users are stored in the external directory; Keycloak reads and (optionally) writes user data from that directory.
+
+### How It Works
+
+1. Keycloak queries the LDAP/AD server to authenticate a user when they log in.
+2. Keycloak caches user attributes locally for performance.
+3. User data (username, email, group memberships) is synchronized from the directory to Keycloak on demand or via periodic full synchronization.
+
+### Key Configuration Options
+
+| Option | Description |
+|:-------|:------------|
+| **Connection URL** | The LDAP server URL (for example, `ldap://ldap.example.com:389`) |
+| **Bind DN** | The Distinguished Name used by Keycloak to bind to the LDAP server |
+| **User DN** | The base DN under which users are searched |
+| **Sync Mode** | `READ_ONLY`: Keycloak reads from LDAP but never writes back. `WRITABLE`: Keycloak can update user attributes in LDAP. |
+| **Periodic Full Sync** | Schedule for full user synchronization from LDAP to Keycloak |
+| **Periodic Changed-Users Sync** | Schedule for incremental sync of users modified since the last sync |
+
+### LDAP Mappers
+
+LDAP Mappers define how LDAP attributes are mapped to Keycloak user attributes and roles. Common mappers include:
+
+- **User Attribute Mapper**: Maps an LDAP attribute (for example, `mail`) to a Keycloak user attribute (for example, `email`).
+- **Group Mapper**: Maps LDAP group memberships to Keycloak groups or roles.
+- **Role Mapper**: Maps LDAP groups to Keycloak Realm or client roles.
+
+## Identity Providers (External IdP Brokering)
+
+**Identity Provider (IdP) Brokering** connects Keycloak to external OIDC or SAML-based identity providers. Keycloak acts as a Service Provider (SP) to the external IdP and as an Identity Provider to its own clients.
+
+### Supported External IdP Types
+
+| Type | Examples |
+|:-----|:---------|
+| **OpenID Connect** | Google, GitHub, Microsoft Entra ID (Azure AD), any OIDC-compliant IdP |
+| **SAML 2.0** | Active Directory Federation Services (ADFS), Okta, any SAML 2.0 IdP |
+| **Social Providers** | Google, Facebook, GitHub, Twitter (built-in provider templates) |
+
+### Brokering Flow
+
+1. The user clicks "Login with Google" (or another external IdP) on the Keycloak login page.
+2. Keycloak redirects the user to the external IdP for authentication.
+3. The external IdP authenticates the user and redirects back to Keycloak with an assertion (OIDC ID token or SAML assertion).
+4. Keycloak validates the assertion, creates or links a local user account, and issues its own tokens to the client application.
+
+### First Login Flow
+
+When a user authenticates through an external IdP for the first time, Keycloak runs a **First Login Flow** to determine how to handle the new user:
+
+- **Create a new local user**: A new Keycloak user is automatically created and linked to the external identity.
+- **Link to an existing user**: If a local user with the same email already exists, Keycloak can prompt the user to confirm and link the accounts.
+- **Require profile review**: The user is prompted to review or complete their profile before proceeding.
+
+The First Login Flow is fully customizable per identity provider.
+
+## Choosing Between User Federation and IdP Brokering
+
+| Consideration | User Federation (LDAP/AD) | IdP Brokering |
+|:--------------|:--------------------------|:--------------|
+| **User store location** | Corporate directory (LDAP/AD) | External identity system (Google, ADFS) |
+| **Authentication execution** | Keycloak authenticates against LDAP/AD | External IdP handles authentication |
+| **User provisioning** | Users synced from directory | Users created on first login |
+| **Best for** | Internal corporate users in an existing directory | Social login, partner federation, enterprise SSO with external IdP |

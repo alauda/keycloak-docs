@@ -1,0 +1,120 @@
+---
+weight: 10
+---
+
+# Configure Ingress and TLS
+
+This guide describes how to expose a Keycloak instance externally via Kubernetes Ingress with TLS encryption enabled, which is required for production deployments.
+
+## Prerequisites
+
+- A running Keycloak instance (see [Install](../installation.mdx)).
+- A valid TLS certificate and private key for the target hostname.
+- An Ingress controller (for example, NGINX) deployed in the cluster.
+
+## Step 1: Create the TLS Secret
+
+Create a Kubernetes TLS Secret from your certificate and private key:
+
+```bash
+kubectl create secret tls keycloak-tls-secret \
+  --cert=tls.crt \
+  --key=tls.key \
+  -n <namespace>
+```
+
+Verify the Secret was created:
+
+```bash
+kubectl get secret keycloak-tls-secret -n <namespace>
+```
+
+## Step 2: Update the Keycloak CR
+
+Update your `Keycloak` CR to enable Ingress with TLS and configure the hostname:
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: example-kc
+spec:
+  instances: 1
+  db:
+    vendor: postgres
+    host: postgres-db
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  http:
+    tlsSecret: keycloak-tls-secret
+  ingress:
+    enabled: true
+    className: nginx
+    tlsSecret: keycloak-tls-secret
+  hostname:
+    hostname: keycloak.example.com
+  proxy:
+    headers: xforwarded
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+```
+
+Apply the updated manifest:
+
+```bash
+kubectl apply -f keycloak.yaml -n <namespace>
+```
+
+## Step 3: Verify the Ingress
+
+Check that the Ingress resource was created and has the correct hostname:
+
+```bash
+kubectl get ingress -n <namespace>
+```
+
+Expected output:
+
+```
+NAME               CLASS   HOSTS                   ADDRESS         PORTS     AGE
+example-kc-ingress nginx   keycloak.example.com    203.0.113.10    80, 443   1m
+```
+
+## Step 4: Verify HTTPS Access
+
+Access the Keycloak Admin Console at `https://keycloak.example.com` and confirm the connection is secure.
+
+Check that Keycloak is ready:
+
+```bash
+kubectl get keycloak example-kc -n <namespace>
+```
+
+## Configuration Reference
+
+| Field | Description |
+|:------|:------------|
+| `spec.http.tlsSecret` | Name of the TLS Secret for HTTPS at the Keycloak Pod level |
+| `spec.ingress.enabled` | Set to `true` to create an Ingress resource |
+| `spec.ingress.className` | Ingress class name (for example, `nginx`) |
+| `spec.ingress.tlsSecret` | Name of the TLS Secret for the Ingress TLS termination |
+| `spec.hostname.hostname` | The public hostname for the Keycloak server |
+| `spec.proxy.headers` | Proxy headers accepted by Keycloak. Set to `xforwarded` for NGINX Ingress. |
+
+<Directive type="warning" title="Proxy Header Configuration">
+When using a reverse proxy or Ingress controller, you must set `spec.proxy.headers` correctly. An incorrect configuration may expose Keycloak to security vulnerabilities by trusting spoofed headers.
+</Directive>

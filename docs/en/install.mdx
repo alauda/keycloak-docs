@@ -1,0 +1,40 @@
+---
+toc: false
+---
+
+# Install
+
+## Prerequisites
+
+Before installing Alauda Build of Keycloak, ensure the following:
+
+1. A running Kubernetes cluster (version 1.25 or higher).
+2. Sufficient cluster resources: at least 2 CPU cores and 2 GiB memory available for the Keycloak Pod.
+3. A PostgreSQL instance (version 13 or higher) accessible from within the cluster.
+4. The platform's application listing capability is available to list plugins in the target cluster.
+
+## Installing the Alauda Build of Keycloak Plugin
+
+### Procedure
+
+<Tabs>
+  <Tab label="Web Console">
+    1. Log in to the platform and go to the **Platform Management** page.
+    2. In the left navigation bar, select **Marketplace** > **Cluster Plugins**.
+    3. Select the target cluster.
+    4. Find **Alauda Build of Keycloak**, click **Install**, and enter the deployment page.
+
+    Configuration Parameters:
+
+    | **Parameter** | **Recommended Configuration** |
+    | :------------ | :----------------------------- |
+    | **Upgrade Strategy** | **Manual**: When a new version is available in the Marketplace, manual confirmation is required before upgrading the Operator. |
+    | **Installation Mode** | **Cluster**: All namespaces under the cluster share a single Operator, reducing resource consumption. |
+    | **Channel** | The default channel is **stable**. |
+    | **Installation Location** | Choose **Recommended Namespace**: Automatically created if it does not exist. |
+
+    5. On the **Install Operator** page, select **Default Configuration**, then click **Install** to complete the deployment.
+  </Tab>
+</Tabs>
+
+

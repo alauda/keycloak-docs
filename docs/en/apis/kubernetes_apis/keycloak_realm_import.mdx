@@ -1,0 +1,232 @@
+---
+weight: 20
+---
+
+# KeycloakRealmImport
+
+The `KeycloakRealmImport` Custom Resource enables declarative, GitOps-friendly management of Keycloak Realm configurations. When this resource is created or updated, the Operator triggers an import Job that loads the Realm configuration into the target Keycloak instance.
+
+## Resource Information
+
+| Property | Value |
+|:---------|:------|
+| **API Group** | `k8s.keycloak.org` |
+| **API Version** | `v2alpha1` |
+| **Kind** | `KeycloakRealmImport` |
+| **Plural** | `keycloakrealmimports` |
+| **Scope** | Namespaced |
+
+## Example
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: my-realm-import
+  namespace: keycloak
+spec:
+  keycloakCRName: example-kc
+  placeholders:
+    CLIENT_SECRET:
+      secret:
+        name: my-client-secret
+        key: client-secret
+  realm:
+    realm: my-realm
+    enabled: true
+    displayName: "My Application Realm"
+    registrationAllowed: false
+    loginWithEmailAllowed: true
+    duplicateEmailsAllowed: false
+    sslRequired: external
+    accessTokenLifespan: 300
+    clients:
+      - clientId: my-app
+        enabled: true
+        publicClient: true
+        redirectUris:
+          - "https://my-app.example.com/*"
+        webOrigins:
+          - "https://my-app.example.com"
+        secret: $(CLIENT_SECRET)
+```
+
+## Spec Fields
+
+### `spec.keycloakCRName`
+
+| Property | Value |
+|:---------|:------|
+| **Type** | `string` |
+| **Required** | Yes |
+
+The name of the `Keycloak` CR in the same namespace that this Realm will be imported into.
+
+---
+
+### `spec.placeholders`
+
+| Property | Value |
+|:---------|:------|
+| **Type** | `map[string]SecretKeySelector` |
+| **Required** | No |
+
+A map of placeholder names to Secret references. Placeholders allow injecting Secret values into the Realm configuration at import time. In the `spec.realm` body, reference a placeholder using the syntax `$(PLACEHOLDER_NAME)`.
+
+```yaml
+placeholders:
+  CLIENT_SECRET:
+    secret:
+      name: my-client-secret
+      key: client-secret
+  SMTP_PASSWORD:
+    secret:
+      name: smtp-credentials
+      key: password
+```
+
+Each placeholder value is a `SecretKeySelector`:
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `secret.name` | `string` | Name of the Kubernetes Secret. |
+| `secret.key` | `string` | Key within the Secret. |
+| `secret.optional` | `boolean` | Whether the Secret must exist. |
+
+---
+
+### `spec.realm`
+
+| Property | Value |
+|:---------|:------|
+| **Type** | `RealmRepresentation` |
+| **Required** | Yes |
+
+The full Realm configuration to import. This corresponds to the Keycloak `RealmRepresentation` JSON structure. The following table describes the most commonly used fields.
+
+#### Core Realm Settings
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `realm` | `string` | The unique Realm identifier (used in URLs). Cannot be changed after creation. |
+| `enabled` | `boolean` | Whether the Realm is active. Disabled Realms reject all authentication requests. |
+| `displayName` | `string` | Human-readable name shown on the login page. |
+| `sslRequired` | `string` | When HTTPS is required. Values: `none`, `external` (recommended for production), `all`. |
+| `registrationAllowed` | `boolean` | Allows users to self-register. |
+| `loginWithEmailAllowed` | `boolean` | Allows users to log in using their email address instead of username. |
+| `duplicateEmailsAllowed` | `boolean` | Allows multiple users to share the same email address. Not recommended. |
+
+#### Token Lifespan Settings
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `accessTokenLifespan` | `integer` | Access token validity in seconds. Default: `300`. |
+| `accessTokenLifespanForImplicitFlow` | `integer` | Access token lifespan for the implicit flow. |
+| `ssoSessionIdleTimeout` | `integer` | SSO session idle timeout in seconds. |
+| `ssoSessionMaxLifespan` | `integer` | Maximum SSO session duration in seconds. |
+| `offlineSessionIdleTimeout` | `integer` | Offline session idle timeout in seconds. |
+| `accessCodeLifespan` | `integer` | Authorization code lifespan in seconds. |
+
+#### Security Settings
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `bruteForceProtected` | `boolean` | Enables brute force protection to lock accounts after repeated failed login attempts. |
+| `bruteForceStrategy` | `string` | Strategy for brute force detection. Values: `LINEAR`, `MULTIPLE`. |
+| `permanentLockout` | `boolean` | Permanently locks accounts after exceeding the failure threshold (requires manual admin unlock). |
+| `maxFailureWaitSeconds` | `integer` | Maximum wait time between login attempts after failures. |
+| `minimumQuickLoginWaitSeconds` | `integer` | Minimum wait time for quick consecutive login attempts. |
+
+#### Clients
+
+The `clients` array defines OIDC/SAML clients registered in the Realm.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `clientId` | `string` | Unique client identifier within the Realm. |
+| `enabled` | `boolean` | Whether the client is active. |
+| `publicClient` | `boolean` | If `true`, the client does not require a client secret (for SPAs and mobile apps). |
+| `standardFlowEnabled` | `boolean` | Enables the Authorization Code flow. |
+| `implicitFlowEnabled` | `boolean` | Enables the Implicit flow (not recommended for new applications). |
+| `directAccessGrantsEnabled` | `boolean` | Enables the Resource Owner Password Credentials flow. |
+| `serviceAccountsEnabled` | `boolean` | Enables the Client Credentials flow for service accounts. |
+| `redirectUris` | `[]string` | Allowed redirect URIs after authentication. Use `*` as a wildcard (not recommended in production). |
+| `webOrigins` | `[]string` | Allowed CORS origins. Set to `+` to allow all origins in `redirectUris`. |
+| `secret` | `string` | Client secret. Use `$(PLACEHOLDER_NAME)` to inject from a Kubernetes Secret. |
+| `protocol` | `string` | Client protocol. Values: `openid-connect`, `saml`. |
+| `attributes` | `map[string]string` | Additional client attributes (for example, PKCE settings, token signing algorithms). |
+| `protocolMappers` | `[]ProtocolMapper` | Custom protocol mappers to add claims to tokens. |
+
+#### Roles
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `roles.realm` | `[]Role` | Array of Realm-level roles. |
+| `roles.client` | `map[string][]Role` | Map of client ID to array of client-level roles. |
+
+Each `Role` object:
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `name` | `string` | Role name. |
+| `description` | `string` | Role description. |
+| `composite` | `boolean` | Whether this role includes other roles. |
+| `composites` | `Composites` | Child roles when `composite` is `true`. |
+
+#### Groups
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `groups` | `[]GroupRepresentation` | Array of groups to create in the Realm. |
+
+Each group object supports `name`, `path`, `realmRoles`, `clientRoles`, `subGroups`, and `attributes`.
+
+#### Users
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `users` | `[]UserRepresentation` | Array of users to import. |
+
+Each user object supports `username`, `email`, `firstName`, `lastName`, `enabled`, `emailVerified`, `credentials`, `realmRoles`, `clientRoles`, and `groups`.
+
+#### Identity Providers
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `identityProviders` | `[]IdentityProviderRepresentation` | External identity provider configurations (OIDC, SAML, social providers). |
+
+#### Authentication Flows
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `authenticationFlows` | `[]AuthenticationFlowRepresentation` | Custom authentication flow definitions. |
+| `browserFlow` | `string` | Alias of the flow to use for browser-based authentication. |
+| `directGrantFlow` | `string` | Alias of the flow for direct grant (password) authentication. |
+| `clientAuthenticationFlow` | `string` | Alias of the flow for client authentication. |
+
+## Status Conditions
+
+| Condition Type | Description |
+|:---------------|:------------|
+| `Done` | `True` when the Realm import Job has completed successfully. |
+| `Started` | `True` when the import Job has been created and started. |
+| `HasErrors` | `True` when the import Job encountered an error. |
+
+Check the import status:
+
+```bash
+kubectl get keycloakrealmimport <name> -n <namespace> -o yaml
+```
+
+A successful import shows:
+
+```yaml
+status:
+  conditions:
+    - type: Done
+      status: "True"
+    - type: Started
+      status: "True"
+    - type: HasErrors
+      status: "False"
+```

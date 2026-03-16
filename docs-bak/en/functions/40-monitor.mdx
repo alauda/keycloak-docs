@@ -1,0 +1,100 @@
+---
+weight: 40
+author: "dev@alauda.io"
+category: "feature"
+queries:
+  - keycloak monitoring metrics
+  - keycloak prometheus metrics
+  - keycloak observability kubernetes
+---
+
+# Monitoring
+
+Alauda Build of Keycloak exposes built-in metrics compatible with Prometheus. Enabling metrics allows you to monitor Keycloak's health, performance, and usage in your observability stack.
+
+## Enable Metrics
+
+Metrics are enabled by setting the `metrics-enabled` option in the `Keycloak` CR:
+
+```yaml
+spec:
+  additionalOptions:
+    - name: metrics-enabled
+      value: "true"
+```
+
+Once enabled, Keycloak exposes a metrics endpoint at:
+
+```
+http://<keycloak-host>:9000/metrics
+```
+
+The metrics endpoint is served on the management port (default: `9000`) via the `spec.httpManagement.port` field, separate from the main HTTP/HTTPS port.
+
+## Key Metrics
+
+The following categories of metrics are available:
+
+| Category | Example Metrics | Description |
+|:---------|:----------------|:------------|
+| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds` | Java Virtual Machine resource usage |
+| **HTTP** | `http_server_requests_seconds`, `http_server_active_requests` | Request count, latency, and active connections |
+| **Database** | `agroal_active_connections`, `agroal_awaiting_connections` | Database connection pool usage |
+| **Keycloak Events** | `keycloak_logins_total`, `keycloak_login_errors_total` | Authentication success and failure counts per Realm |
+
+## Configure Prometheus Scraping
+
+Add the following scrape configuration to your Prometheus instance to collect Keycloak metrics:
+
+```yaml
+scrape_configs:
+  - job_name: keycloak
+    static_configs:
+      - targets:
+          - <keycloak-service>:9000
+    metrics_path: /metrics
+```
+
+If you are using the Prometheus Operator, create a `ServiceMonitor`:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: keycloak-metrics
+  namespace: <namespace>
+spec:
+  selector:
+    matchLabels:
+      app: keycloak
+  endpoints:
+    - port: management
+      path: /metrics
+      interval: 30s
+```
+
+## Liveness and Readiness Probes
+
+The Keycloak Operator configures liveness and readiness probes automatically. You can customize the probe parameters in the `Keycloak` CR:
+
+```yaml
+spec:
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+  readinessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+```
+
+The probes use the management endpoint at `http://<pod>:9000/health/live` and `http://<pod>:9000/health/ready`.
+
+## Health Endpoints
+
+Keycloak exposes three health endpoints on the management port:
+
+| Endpoint | Description |
+|:---------|:------------|
+| `/health/live` | Returns `UP` if the Keycloak process is running |
+| `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized) |
+| `/health/started` | Returns `UP` after Keycloak has fully started |

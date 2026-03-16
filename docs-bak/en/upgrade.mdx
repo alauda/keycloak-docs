@@ -1,0 +1,84 @@
+---
+weight: 16
+author: "dev@alauda.io"
+category: "howto"
+queries:
+  - upgrade alauda build of keycloak
+  - keycloak operator upgrade path
+  - keycloak version compatibility matrix
+---
+
+# Upgrade
+
+<Directive type="note">
+This document provides the upgrade path principles and supported version compatibility for Alauda Build of Keycloak.
+</Directive>
+
+## Compatibility Matrix
+
+The table below lists supported versions of Alauda Build of Keycloak and its key components:
+
+| Alauda Build of Keycloak Version | Keycloak Version | Kubernetes Version |
+|:--------------------------------:|:----------------:|:------------------:|
+| v26-latest | 26.4.7 | 1.25+ |
+| v21.0.0 | 21.x | 1.25+ |
+
+For version-specific changes, new features, and deprecations, see the **[Release Notes](./release_notes.mdx)**.
+
+## Prerequisites
+
+Before initiating an upgrade, ensure the following:
+
+1. **Version Compatibility**: Your current version falls within a supported upgrade path.
+2. **Instance Health**: All Keycloak instances are in a `Ready` state.
+3. **Database Backup**: Create a backup of the PostgreSQL database before proceeding.
+4. **Resource Availability**: The cluster has sufficient resources to support the upgrade process.
+
+Check the health of all Keycloak instances:
+
+```bash
+kubectl get keycloak -A -o custom-columns="NAME:.metadata.name,NAMESPACE:.metadata.namespace,READY:.status.conditions[?(@.type=='Ready')].status"
+```
+
+## Upgrade Path Guidelines
+
+### Consecutive Upgrade (Recommended)
+
+Upgrade step-by-step through consecutive versions to ensure compatibility.
+
+- **Example**: `v21.0.0 → v26-latest`
+
+### Patch-Level Upgrade
+
+Upgrades between patch versions within the same minor version are fully compatible and can be performed directly without additional migration steps.
+
+## Upgrade Procedure
+
+<Tabs>
+  <Tab label="Web Console">
+    1. Log in to the platform and go to the **Platform Management** page.
+    2. In the left navigation bar, select **Marketplace** > **Cluster Plugins**.
+    3. Find **Alauda Build of Keycloak** and click **Upgrade**.
+    4. Select the target version and confirm the upgrade.
+    5. Monitor the Operator Pod status until it returns to `Running`.
+    6. Verify that all Keycloak instances return to `Ready` state.
+  </Tab>
+  <Tab label="CLI">
+    Update the Operator subscription to the new channel or version, then verify the rollout:
+
+    ```bash
+    # Check Operator Pod status
+    kubectl get pods -n <operator-namespace> -l app=keycloak-operator
+
+    # Verify Keycloak instances after upgrade
+    kubectl get keycloak -A
+    ```
+  </Tab>
+</Tabs>
+
+## Upgrade Strategy
+
+Alauda Build of Keycloak executes upgrades based on the configured upgrade strategy in the Operator subscription:
+
+- **Automatic**: Auto-upgrades are triggered immediately upon detecting a new Operator version in the channel.
+- **Manual**: Requires manual approval before initiating the upgrade process. This is the recommended strategy for production environments.

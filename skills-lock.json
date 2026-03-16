@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "doom-doc-assistant": {
+      "source": "alauda/agent-skills",
+      "sourceType": "github",
+      "computedHash": "47f8f68117894132cd76b4d0c178c3646aca26abf099fd19f207b46b6e061bd1"
+    }
+  }
+}

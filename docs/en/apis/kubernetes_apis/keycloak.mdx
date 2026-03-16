@@ -1,0 +1,307 @@
+---
+weight: 10
+---
+
+# Keycloak
+
+The `Keycloak` Custom Resource defines and manages a Keycloak server instance. The Operator reconciles this resource to create and maintain the Kubernetes resources required to run Keycloak, including Deployments, Services, Ingress, and Secrets.
+
+## Resource Information
+
+| Property | Value |
+|:---------|:------|
+| **API Group** | `k8s.keycloak.org` |
+| **API Version** | `v2alpha1` |
+| **Kind** | `Keycloak` |
+| **Plural** | `keycloaks` |
+| **Short Name** | `kc` |
+| **Scope** | Namespaced |
+
+## Example
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: example-kc
+  namespace: keycloak
+spec:
+  instances: 2
+  db:
+    vendor: postgres
+    host: postgres-db
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  http:
+    tlsSecret: keycloak-tls-secret
+  ingress:
+    enabled: true
+    className: nginx
+    tlsSecret: keycloak-tls-secret
+  hostname:
+    hostname: keycloak.example.com
+  proxy:
+    headers: xforwarded
+  additionalOptions:
+    - name: metrics-enabled
+      value: "true"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+```
+
+## Spec Fields
+
+### `spec.instances`
+
+| Property | Value |
+|:---------|:------|
+| **Type** | `integer` |
+| **Required** | No (default: `1`) |
+
+Number of Keycloak server replicas. Set to `2` or more for high availability. Multiple instances share session state via the embedded Infinispan cache cluster.
+
+---
+
+### `spec.db`
+
+Database connection configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `vendor` | `string` | Database vendor. Supported values: `postgres`, `mysql`, `mariadb`, `mssql`, `oracle`. |
+| `host` | `string` | Hostname of the database server. Ignored if `url` is set. |
+| `port` | `integer` | Port of the database server. Ignored if `url` is set. |
+| `database` | `string` | Database name. Ignored if `url` is set. |
+| `schema` | `string` | Database schema to use. |
+| `url` | `string` | Full JDBC URL. Overrides `host`, `port`, and `database` if set. |
+| `usernameSecret` | `SecretKeySelector` | Reference to the Secret containing the database username. |
+| `passwordSecret` | `SecretKeySelector` | Reference to the Secret containing the database password. |
+| `poolInitialSize` | `integer` | Initial size of the database connection pool. |
+| `poolMinSize` | `integer` | Minimum size of the database connection pool. |
+| `poolMaxSize` | `integer` | Maximum size of the database connection pool. |
+
+**`SecretKeySelector` fields:**
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `name` | `string` | Name of the Kubernetes Secret. |
+| `key` | `string` | Key within the Secret. |
+| `optional` | `boolean` | Whether the Secret must exist. |
+
+---
+
+### `spec.http`
+
+HTTP and HTTPS listener configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `httpEnabled` | `boolean` | Enables the HTTP (non-TLS) listener. Recommended for development only. |
+| `httpPort` | `integer` | HTTP port. Default: `8080`. |
+| `httpsPort` | `integer` | HTTPS port. Default: `8443`. |
+| `tlsSecret` | `string` | Name of the TLS Secret for HTTPS at the Pod level. The Secret must be of type `kubernetes.io/tls`. |
+| `annotations` | `map[string]string` | Annotations to append to the Service object. |
+| `labels` | `map[string]string` | Labels to append to the Service object. |
+
+---
+
+### `spec.ingress`
+
+Kubernetes Ingress configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `enabled` | `boolean` | Creates an Ingress resource when set to `true`. |
+| `className` | `string` | Ingress class name (for example, `nginx`). |
+| `tlsSecret` | `string` | Name of the TLS Secret for the Ingress TLS entry. |
+| `annotations` | `map[string]string` | Additional annotations for the Ingress object. |
+| `labels` | `map[string]string` | Additional labels for the Ingress object. |
+
+---
+
+### `spec.hostname`
+
+Hostname and URL configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `hostname` | `string` | Public hostname for the Keycloak server. Required when Ingress is enabled. |
+| `admin` | `string` | Hostname for the Admin Console. Defaults to `hostname` if not set. |
+| `strict` | `boolean` | Disables dynamic hostname resolution from request headers. Recommended for production. |
+| `backchannelDynamic` | `boolean` | Enables dynamic backchannel URL resolution. Set to `true` when applications access Keycloak via a private network. |
+
+---
+
+### `spec.proxy`
+
+Reverse proxy configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `headers` | `string` | Proxy headers accepted by the server. Set to `xforwarded` for NGINX Ingress. Misconfiguration may expose security vulnerabilities. |
+
+---
+
+### `spec.resources`
+
+Compute resources for the Keycloak container.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `requests.cpu` | `string` | CPU request. Recommended minimum: `500m`. |
+| `requests.memory` | `string` | Memory request. Recommended minimum: `1Gi`. |
+| `limits.cpu` | `string` | CPU limit. |
+| `limits.memory` | `string` | Memory limit. Recommended minimum: `2Gi`. |
+
+---
+
+### `spec.additionalOptions`
+
+An array of key-value pairs for additional Keycloak server configuration options. Values can be direct strings or references to Secrets.
+
+```yaml
+additionalOptions:
+  - name: metrics-enabled
+    value: "true"
+  - name: log-level
+    value: "INFO"
+  - name: my-secret-option
+    secret:
+      name: my-secret
+      key: option-value
+```
+
+Refer to the [Keycloak All Configuration](https://www.keycloak.org/server/all-config) reference for available option names.
+
+---
+
+### `spec.bootstrapAdmin`
+
+Configures the initial bootstrap administrator. Used only during initial cluster creation.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `user.secret` | `string` | Name of the Secret containing `username` and `password` keys for the bootstrap admin user. |
+| `service.secret` | `string` | Name of the Secret containing `client-id` and `client-secret` keys for the bootstrap admin service account. |
+
+---
+
+### `spec.cache`
+
+Keycloak cache configuration.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `configMapFile.name` | `string` | Name of the ConfigMap containing the Infinispan cache configuration XML. |
+| `configMapFile.key` | `string` | Key within the ConfigMap. |
+
+---
+
+### `spec.features`
+
+Enable or disable specific Keycloak feature flags.
+
+```yaml
+features:
+  enabled:
+    - "token-exchange"
+    - "admin-fine-grained-authz"
+  disabled:
+    - "impersonation"
+```
+
+---
+
+### `spec.scheduling`
+
+Pod scheduling configuration for Keycloak Pods. Supports the same fields as Kubernetes Pod scheduling:
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `affinity` | `Affinity` | Node and Pod affinity/anti-affinity rules. |
+| `tolerations` | `[]Toleration` | Toleration rules for tainted nodes. |
+| `topologySpreadConstraints` | `[]TopologySpreadConstraint` | Constraints for spreading Pods across topology domains. |
+| `priorityClassName` | `string` | Priority class name for the Keycloak Pods. |
+
+---
+
+### `spec.networkPolicy`
+
+Controls ingress traffic flow into Keycloak Pods.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `enabled` | `boolean` | Enables ingress traffic control. Default: `true`. |
+| `http` | `[]NetworkPolicyPeer` | Sources allowed to access the HTTP endpoint. An empty list allows all sources. |
+| `https` | `[]NetworkPolicyPeer` | Sources allowed to access the HTTPS endpoint. |
+| `management` | `[]NetworkPolicyPeer` | Sources allowed to access the management endpoint (metrics, health). |
+
+---
+
+### `spec.livenessProbe` / `spec.readinessProbe`
+
+Probe configuration for the Keycloak container.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `periodSeconds` | `integer` | Interval between probe checks. Default: `10`. |
+| `failureThreshold` | `integer` | Number of consecutive failures before the probe is considered failed. Default: `3`. |
+
+---
+
+### `spec.image`
+
+Custom Keycloak container image. Overrides the default image managed by the Operator.
+
+```yaml
+spec:
+  image: "quay.io/my-org/my-keycloak:custom-tag"
+```
+
+---
+
+### `spec.imagePullSecrets`
+
+List of Secrets to use when pulling the Keycloak image from a private registry.
+
+```yaml
+spec:
+  imagePullSecrets:
+    - name: my-registry-secret
+```
+
+---
+
+### `spec.env`
+
+Environment variables for the Keycloak container. Use `spec.additionalOptions` for standard Keycloak configuration options and `spec.env` for non-standard or container-level variables.
+
+```yaml
+spec:
+  env:
+    - name: JAVA_OPTS_APPEND
+      value: "-Xms512m -Xmx2048m"
+    - name: MY_SECRET_VAR
+      secret:
+        name: my-secret
+        key: my-key
+```
+
+## Status Conditions
+
+The Operator sets the following conditions on the `Keycloak` resource status:
+
+| Condition Type | Description |
+|:---------------|:------------|
+| `Ready` | `True` when all Keycloak instances are running and healthy. |
+| `HasErrors` | `True` when the Operator encounters an error during reconciliation. |
+| `RollingUpdate` | `True` while a rolling update of the Keycloak Deployment is in progress. |

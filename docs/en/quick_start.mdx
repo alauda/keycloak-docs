@@ -1,0 +1,157 @@
+---
+
+---
+
+# Quick Start
+
+This document helps new users quickly understand and use the Keycloak feature.
+
+## Deploying a Keycloak Instance
+
+After the Operator is installed, deploy a Keycloak instance by creating the required Kubernetes resources.
+
+### Step 1: Create the Database Secret
+
+Create a Secret to store the PostgreSQL credentials:
+
+```bash
+kubectl create secret generic keycloak-db-secret \
+  --from-literal=username=kc-user \
+  --from-literal=password=<your-password> \
+  -n <namespace>
+```
+
+### Step 2: Deploy PostgreSQL (Development Only)
+
+<Directive type="warning" title="Development Environment Only">
+  The following PostgreSQL configuration uses `emptyDir` storage, which does not persist data across Pod restarts. For production environments, replace `emptyDir` with a `PersistentVolumeClaim`.
+</Directive>
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-db
+spec:
+  serviceName: postgres-db
+  selector:
+    matchLabels:
+      app: postgresql-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql-db
+    spec:
+      containers:
+        - name: postgresql-db
+          image: quay.io/sclorg/postgresql-15-c9s:latest
+          volumeMounts:
+            - mountPath: /var/lib/pgsql/data
+              name: data-volume
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: keycloak-db-secret
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: keycloak-db-secret
+            - name: POSTGRESQL_DATABASE
+              value: keycloak
+      volumes:
+        - name: data-volume
+          emptyDir: {}
+---
+toc: falseapiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db
+spec:
+  selector:
+    app: postgresql-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+```
+
+### Step 3: Create the Keycloak Instance
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: example-kc
+spec:
+  instances: 1
+  db:
+    vendor: postgres
+    host: postgres-db
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  http:
+    httpEnabled: true
+  ingress:
+    enabled: false
+  additionalOptions:
+    - name: metrics-enabled
+      value: "true"
+    - name: hostname-strict
+      value: "false"
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+```
+
+Apply the manifest:
+
+```bash
+kubectl apply -f keycloak.yaml -n <namespace>
+```
+
+### Step 4: Verify the Instance
+
+Check the instance status:
+
+```bash
+kubectl get keycloak example-kc -n <namespace> -o wide
+```
+
+When the `READY` column shows `true`, the instance is running successfully.
+
+## Accessing the Admin Console
+
+When deploying Keycloak, the Operator generates a random initial administrator username and password and stores them as a Secret in the same namespace as the Keycloak CR. The Secret name follows the pattern `<keycloak-cr-name>-initial-admin`.
+
+Retrieve the initial credentials:
+
+```bash
+kubectl get secret example-kc-initial-admin -n <namespace> \
+  -o jsonpath='{.data.username}' | base64 --decode
+kubectl get secret example-kc-initial-admin -n <namespace> \
+  -o jsonpath='{.data.password}' | base64 --decode
+```
+
+For development access, use port forwarding:
+
+```bash
+kubectl port-forward service/example-kc-service 8080:8080 -n <namespace>
+```
+
+Then access the Admin Console at `http://localhost:8080`.

@@ -1,0 +1,127 @@
+---
+weight: 30
+author: "dev@alauda.io"
+category: "feature"
+queries:
+  - keycloak user management
+  - keycloak roles and groups
+  - keycloak user permissions
+---
+
+# Manage Users and Roles
+
+Keycloak provides comprehensive user lifecycle management and fine-grained role-based access control (RBAC). Users, roles, and groups are managed per Realm.
+
+## User Management
+
+### Create a User
+
+<Tabs>
+  <Tab label="Web Console">
+    1. Log in to the Keycloak Admin Console and select the target Realm.
+    2. Click **Users** in the left navigation bar.
+    3. Click **Create new user**.
+    4. Fill in the required fields:
+
+    | Field | Description |
+    | :---- | :---------- |
+    | **Username** | Unique identifier for the user within the Realm |
+    | **Email** | User email address. Used for login if email login is enabled. |
+    | **First Name / Last Name** | Display name fields |
+    | **Email Verified** | If enabled, skips the email verification step |
+    | **Enabled** | If disabled, the user cannot log in |
+
+    5. Click **Create**.
+    6. Go to the **Credentials** tab to set an initial password.
+  </Tab>
+  <Tab label="CLI">
+    Use the Keycloak Admin REST API to create a user:
+
+    ```bash
+    # Obtain an admin access token
+    ACCESS_TOKEN=$(curl -s -X POST \
+      "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli" \
+      -d "username=<admin-user>" \
+      -d "password=<admin-password>" \
+      -d "grant_type=password" | jq -r '.access_token')
+
+    # Create the user
+    curl -s -X POST \
+      "https://<keycloak-host>/admin/realms/<realm>/users" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "username": "jdoe",
+        "email": "jdoe@example.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "enabled": true,
+        "emailVerified": true,
+        "credentials": [{
+          "type": "password",
+          "value": "changeme",
+          "temporary": true
+        }]
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+### Reset User Password
+
+1. In the Admin Console, go to **Users** and select the target user.
+2. Click the **Credentials** tab.
+3. Click **Reset password**.
+4. Enter a new password and toggle **Temporary** if you want the user to change the password on next login.
+5. Click **Save password**.
+
+## Role Management
+
+Keycloak supports two types of roles:
+
+| Role Type | Scope | Use Case |
+|:----------|:------|:---------|
+| **Realm Roles** | Scoped to the entire Realm | Represent global application roles (for example, `admin`, `user`) |
+| **Client Roles** | Scoped to a specific client | Represent application-specific permissions (for example, `orders:read`) |
+
+### Create a Realm Role
+
+1. In the Admin Console, go to **Realm Roles**.
+2. Click **Create role**.
+3. Enter a **Role name** and optional **Description**.
+4. Click **Save**.
+
+### Assign Roles to Users
+
+1. Go to **Users** and select the target user.
+2. Click the **Role mapping** tab.
+3. Click **Assign role**.
+4. Select the roles to assign and click **Assign**.
+
+## Group Management
+
+**Groups** allow you to manage role assignments for multiple users at once. Assign roles to a group, and all group members inherit those roles automatically.
+
+### Create a Group
+
+1. In the Admin Console, go to **Groups**.
+2. Click **Create group**.
+3. Enter a **Name** and click **Create**.
+4. In the **Role Mapping** tab of the group, assign the desired Realm or client roles.
+
+### Add Users to a Group
+
+1. Go to **Users** and select the target user.
+2. Click the **Groups** tab.
+3. Click **Join Group**, select the group, and click **Join**.
+
+## Composite Roles
+
+A **Composite Role** is a role that contains other roles. When a user is assigned a composite role, they inherit all roles included in it. This simplifies permission management for complex role hierarchies.
+
+To create a composite role:
+
+1. Create a Realm role.
+2. In the role's detail view, enable **Composite role**.
+3. In the **Associated roles** tab, add the child roles.

@@ -1,0 +1,51 @@
+---
+weight: 10
+author: "your-email@domain.com"
+category: "upgrade"
+queries:
+  - upgrade [module]
+  - update [module] to [version]
+---
+
+{/* reference-start#upgrade_template */}
+
+# Upgrading [Module Name]
+
+{/* Introduction: Describe the upgrade path and target versions. */}
+## Introduction
+
+[Overview of the upgrade process from version X to version Y.]
+
+## Upgrade Paths
+
+| Source Version | Target Version | Support Status |
+| :--- | :--- | :--- |
+| [v1.x] | [v2.x] | Direct Upgrade |
+
+## Backup and Safety
+
+:::danger
+Ensure you have a complete backup of all critical data before proceeding with the upgrade.
+:::
+
+## Upgrade Steps
+
+<Steps>
+  ### [Step 1: Pre-upgrade Checks]
+  [Verify environment health.]
+
+  ### [Step 2: Upgrade Execution]
+  [Apply the upgrade commands.]
+
+  ```bash
+  [Upgrade Command]
+  ```
+
+  ### [Step 3: Verification]
+  [Check logs and status.]
+</Steps>
+
+## Rollback Plan
+{/* (Optional) How to revert if the upgrade fails. */}
+
+{/* reference-end */}

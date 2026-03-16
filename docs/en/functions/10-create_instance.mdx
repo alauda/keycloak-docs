@@ -1,0 +1,140 @@
+---
+weight: 10
+---
+
+# Create Instance
+
+You can create a Keycloak instance to provide centralized identity and access management for your applications running in the Kubernetes cluster.
+
+## Create a Keycloak Instance
+
+### Prerequisites
+
+- The Alauda Build of Keycloak Operator is installed in the cluster.
+- A PostgreSQL database is accessible from within the cluster.
+- A Kubernetes Secret containing the database credentials exists in the target namespace.
+
+### Procedure
+
+<Tabs>
+  <Tab label="CLI">
+    Create a Keycloak instance via CLI:
+
+    ```yaml
+    apiVersion: k8s.keycloak.org/v2alpha1
+    kind: Keycloak
+    metadata:
+      name: example-kc
+    spec:
+      instances: 1
+      db:
+        vendor: postgres
+        host: postgres-db
+        usernameSecret:
+          name: keycloak-db-secret
+          key: username
+        passwordSecret:
+          name: keycloak-db-secret
+          key: password
+      http:
+        httpEnabled: true
+      ingress:
+        enabled: false
+      additionalOptions:
+        - name: metrics-enabled
+          value: "true"
+        - name: hostname-strict
+          value: "false"
+      unsupported:
+        podTemplate:
+          spec:
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false
+                  runAsNonRoot: true
+                  capabilities:
+                    drop:
+                      - ALL
+                  seccompProfile:
+                    type: RuntimeDefault
+    ```
+
+    Apply the manifest:
+
+    ```bash
+    kubectl apply -f keycloak.yaml -n <namespace>
+    ```
+  </Tab>
+  <Tab label="Web Console">
+    1. In the left navigation bar, go to **Application Services** > **Keycloak**.
+    2. Click the target namespace.
+    3. Click **Create Keycloak Instance**.
+    4. Complete the configuration with reference to the table below.
+
+    | Configuration | Field | Description |
+    | :------------ | :---- | :---------- |
+    | **Instances** | Instance Count | Number of Keycloak replicas. Set to 2 or more for high availability. |
+    | **Database** | Vendor | Database type. `postgres` is recommended. |
+    | **Database** | Host | Hostname or service name of the database. |
+    | **Database** | Username Secret | Reference to the Kubernetes Secret containing the database username. |
+    | **Database** | Password Secret | Reference to the Kubernetes Secret containing the database password. |
+    | **HTTP** | HTTP Enabled | Enable the HTTP listener. For development only; use TLS in production. |
+    | **Ingress** | Enabled | Enable Ingress exposure. Required for external access. |
+
+    5. Click **Create**.
+
+    When the instance status changes to **Ready**, the instance has been created successfully.
+  </Tab>
+</Tabs>
+
+After creating the instance, verify its status:
+
+```bash
+kubectl get keycloak -n <namespace> -o custom-columns="NAME:.metadata.name,INSTANCES:.spec.instances,READY:.status.conditions[?(@.type=='Ready')].status"
+```
+
+## Create a High-Availability Instance {#create-ha-instance}
+
+For production environments, set `spec.instances` to 2 or more to enable multiple replicas with shared session state.
+
+<Directive type="warning" title="Database Requirement">
+High-availability deployments require a highly available PostgreSQL backend. Ensure your database has replication or is a managed service before increasing the instance count.
+</Directive>
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: example-kc-ha
+spec:
+  instances: 3
+  db:
+    vendor: postgres
+    host: postgres-db
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  http:
+    tlsSecret: example-tls-secret
+  ingress:
+    enabled: true
+    className: nginx
+    tlsSecret: example-tls-secret
+  hostname:
+    hostname: keycloak.example.com
+  proxy:
+    headers: xforwarded
+  scheduling:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: keycloak
+              topologyKey: kubernetes.io/hostname
+```
