@@ -93,7 +93,7 @@ After creating the instance, verify its status:
 kubectl get keycloak -n <namespace> -o custom-columns="NAME:.metadata.name,INSTANCES:.spec.instances,READY:.status.conditions[?(@.type=='Ready')].status"
 ```
 
-## Create a High-Availability Instance {#create-ha-instance}
+## Create a High-Availability Instance
 
 For production environments, set `spec.instances` to 2 or more to enable multiple replicas with shared session state.
 
