@@ -105,11 +105,11 @@ After the import completes, verify that all data was migrated correctly:
    - Role assignments are correct
    - Composite roles and permission mappings are preserved
 
-```bash
-# Check imported Realms
-kubectl exec -it <keycloak-pod-name> -n <namespace> -- \
-  /opt/keycloak/bin/kc.sh show-config
-```
+     ```bash
+     # Check imported Realms
+     kubectl exec -it <keycloak-pod-name> -n <namespace> -- \
+       /opt/keycloak/bin/kc.sh show-config
+     ```
 
 ## Notes
 
