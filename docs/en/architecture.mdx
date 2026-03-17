@@ -15,8 +15,8 @@ Alauda Build of Keycloak is deployed and managed through a Kubernetes Operator. 
 - **Database**: A persistent relational database (PostgreSQL recommended) that stores all Realm, user, client, and session data.
 - **Ingress / Service**: Exposes the Keycloak server to internal cluster services or external clients via Kubernetes Ingress.
 
-```
-┌─────────────────────────────────────────────────────────┐
+  ```
+  ┌─────────────────────────────────────────────────────────┐
 │                    Kubernetes Cluster                   │
 │                                                         │
 │   ┌──────────────────┐     ┌────────────────────────┐   │
@@ -35,8 +35,8 @@ Alauda Build of Keycloak is deployed and managed through a Kubernetes Operator. 
 │   ┌──────────▼──────────┐  ┌──────────────────────┐     │
 │   │   PostgreSQL DB     │  │  Ingress / Service   │     │
 │   └─────────────────────┘  └──────────────────────┘     │
-└─────────────────────────────────────────────────────────┘
-```
+  └─────────────────────────────────────────────────────────┘
+  ```
 
 ## Keycloak Server Architecture
 
