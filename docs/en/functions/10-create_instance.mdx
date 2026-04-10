@@ -30,6 +30,7 @@ You can create a Keycloak instance to provide centralized identity and access ma
       db:
         vendor: postgres
         host: postgres-db
+        database: keycloak
         usernameSecret:
           name: keycloak-db-secret
           key: username
@@ -111,6 +112,7 @@ spec:
   db:
     vendor: postgres
     host: postgres-db
+    database: keycloak
     usernameSecret:
       name: keycloak-db-secret
       key: username
@@ -137,4 +139,16 @@ spec:
                 matchLabels:
                   app: keycloak
               topologyKey: kubernetes.io/hostname
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
 ```
