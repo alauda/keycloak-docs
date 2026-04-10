@@ -17,13 +17,12 @@ spec:
       value: "true"
 ```
 
-Once enabled, Keycloak exposes a metrics endpoint at:
+Once enabled, Keycloak exposes a metrics endpoint on the management port (default: `9000`), configurable via `spec.httpManagement.port`:
 
-```
-http://<keycloak-host>:9000/metrics
-```
+- **Within the cluster**: `http://<keycloak-service-name>.<namespace>:9000/metrics`
+- **From within a Pod**: `http://localhost:9000/metrics`
 
-The metrics endpoint is served on the management port (default: `9000`) via the `spec.httpManagement.port` field, separate from the main HTTP/HTTPS port.
+The management port is separate from the main HTTP/HTTPS port.
 
 ## Key Metrics
 
