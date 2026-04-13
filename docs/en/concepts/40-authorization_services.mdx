@@ -1,0 +1,87 @@
+---
+weight: 40
+---
+
+# Authorization Services
+
+Keycloak provides fine-grained authorization services based on the **User-Managed Access (UMA)** specification and a rich policy evaluation engine. These services go beyond role-based access control (RBAC) to support attribute-based, time-based, and context-aware authorization decisions.
+
+## Overview
+
+Traditional RBAC assigns roles to users and checks roles in application code. Keycloak Authorization Services externalizes authorization logic from the application into a centralized policy engine:
+
+- **Applications** register their protected resources and scopes.
+- **Administrators** define policies that govern access to those resources.
+- **Keycloak** evaluates policies at runtime and returns authorization decisions.
+- **Applications** enforce the decisions using the authorization response.
+
+This separation allows authorization logic to be managed centrally without changing application code.
+
+## Key Concepts
+
+| Concept | Description |
+|:--------|:------------|
+| **Resource Server** | A client application that hosts protected resources and delegates authorization to Keycloak |
+| **Resource** | A protected entity (for example, an API endpoint, a document, a database record) |
+| **Scope** | An action that can be performed on a resource (for example, `view`, `edit`, `delete`) |
+| **Permission** | A rule that associates a policy with specific resources and/or scopes |
+| **Policy** | A condition that determines whether access is granted or denied |
+| **Requesting Party Token (RPT)** | An access token enriched with authorization data (granted permissions) |
+
+## Policy Types
+
+Keycloak supports multiple policy types that can be combined:
+
+| Policy Type | Description | Example |
+|:------------|:------------|:--------|
+| **User-based** | Grants access to specific users | Allow `alice` and `bob` |
+| **Role-based** | Grants access based on realm or client roles | Allow users with `manager` role |
+| **Group-based** | Grants access based on group membership | Allow members of `Engineering` group |
+| **Client-based** | Grants access to requests from specific clients | Allow requests from `admin-portal` client |
+| **Time-based** | Grants access during specific time windows | Allow access Monday–Friday, 09:00–18:00 |
+| **JavaScript-based** | Custom logic evaluated at runtime | Check custom user attributes or request context |
+| **Aggregated** | Combines multiple policies with a decision strategy | All sub-policies must grant access (Unanimous), or at least one (Affirmative) |
+| **Regex-based** | Matches a claim value against a regular expression | Allow if `department` matches `eng-.*` |
+| **Client Scope** | Grants access based on the client scope present in the token | Allow if scope `admin` is present |
+
+## Decision Strategies
+
+When a permission references multiple policies, the **decision strategy** determines how the individual policy decisions are combined:
+
+| Strategy | Description |
+|:---------|:------------|
+| **Unanimous** | All policies must grant access (AND logic) |
+| **Affirmative** | At least one policy must grant access (OR logic) |
+| **Consensus** | The majority of policies must grant access |
+
+## Authorization Flow
+
+1. The client application requests an access token from Keycloak.
+2. The client sends the access token to the resource server (API).
+3. The resource server requests an RPT from the Keycloak token endpoint, specifying the resource and scope being accessed.
+4. Keycloak evaluates all applicable policies and returns an RPT containing the granted permissions (or denies the request).
+5. The resource server inspects the RPT permissions and allows or denies the operation.
+
+Alternatively, the resource server can call the token introspection endpoint to evaluate permissions without obtaining an RPT.
+
+## Enabling Authorization Services
+
+Authorization services are enabled per client:
+
+1. In the Admin Console, go to **Clients** and select the target client.
+2. Enable **Client authentication** (the client must be confidential).
+3. Enable **Authorization**.
+4. Click **Save**.
+5. A new **Authorization** tab appears with sub-sections for resources, scopes, policies, and permissions.
+
+For step-by-step configuration, see [Configure Authorization](../functions/60-configure_authorization.mdx).
+
+## User-Managed Access (UMA)
+
+UMA extends the authorization model to allow **resource owners** (end users) to manage access to their own resources. With UMA:
+
+- Users can share resources with other users or groups.
+- Users can approve or deny access requests.
+- Authorization decisions respect the resource owner's policies.
+
+UMA is an advanced feature used primarily in scenarios where end users need fine-grained control over resource sharing (for example, document sharing, API access delegation).

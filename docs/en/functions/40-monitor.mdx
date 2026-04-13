@@ -91,3 +91,67 @@ Keycloak exposes three health endpoints on the management port:
 | `/health/live` | Returns `UP` if the Keycloak process is running |
 | `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized) |
 | `/health/started` | Returns `UP` after Keycloak has fully started |
+
+## Event Auditing
+
+Keycloak provides a built-in event system that records login events and admin operations. Events can be stored in the database and forwarded to external listeners.
+
+### Enable Login Events
+
+1. In the Admin Console, go to **Realm Settings** > **Events** tab.
+2. In the **User events settings** section:
+   - Enable **Save events**.
+   - Set **Expiration** to control how long events are retained (for example, `30` days).
+   - Select the **Event types** to record (or leave blank to record all types).
+3. Click **Save**.
+
+### Key Login Event Types
+
+| Event Type | Description |
+|:-----------|:------------|
+| `LOGIN` | Successful user login |
+| `LOGIN_ERROR` | Failed login attempt |
+| `LOGOUT` | User logout |
+| `REGISTER` | New user registration |
+| `CODE_TO_TOKEN` | Authorization code exchanged for tokens |
+| `CODE_TO_TOKEN_ERROR` | Failed token exchange |
+| `REFRESH_TOKEN` | Token refresh |
+| `CLIENT_LOGIN` | Client (service account) authentication |
+| `IMPERSONATE` | Admin impersonated a user |
+
+### Enable Admin Events
+
+1. In the **Admin events settings** section:
+   - Enable **Save events**.
+   - Enable **Include representation** to record the full request body of admin operations (useful for audit trails, but increases storage usage).
+2. Click **Save**.
+
+Admin events record all operations performed via the Admin Console or Admin REST API, including resource type, operation type (CREATE, UPDATE, DELETE), and the admin user who performed the action.
+
+### View Events
+
+- **Login events**: Go to **Events** > **User events** tab. Filter by event type, user, date range, or client.
+- **Admin events**: Go to **Events** > **Admin events** tab. Filter by operation type, resource type, or admin user.
+
+### Event Listeners
+
+Event listeners process events as they occur. Keycloak includes two built-in listeners:
+
+| Listener | Description |
+|:---------|:------------|
+| **jboss-logging** | Writes events to the Keycloak server log. Useful for log aggregation systems (ELK, Loki). |
+| **email** | Sends email notifications to the user when specific events occur (for example, login from a new device). |
+
+Configure listeners in **Realm Settings** > **Events** > **Event listeners**.
+
+### Query Events via REST API
+
+```bash
+# Get recent login events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/events?type=LOGIN_ERROR&first=0&max=50"
+
+# Get admin events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/admin-events?first=0&max=50"
+```

@@ -110,3 +110,44 @@ Alauda Build of Keycloak enforces security hardening through Pod security contex
 - Running as non-root
 - Dropping all Linux capabilities
 - Applying `RuntimeDefault` seccomp profiles
+
+## Clustering and Cache Architecture
+
+### Embedded Infinispan
+
+Keycloak uses an embedded Infinispan cache layer for high-performance distributed caching. In a multi-replica deployment, Infinispan nodes form a cluster automatically using Kubernetes-native discovery (DNS_PING or KUBE_PING).
+
+### Cache Types
+
+| Cache | Purpose | Distribution |
+|:------|:--------|:-------------|
+| **Realm Cache** | Caches realm configuration (clients, roles, authentication flows) | Replicated across all nodes |
+| **User Cache** | Caches user data from the database or user federation providers | Replicated across all nodes |
+| **Session Cache** | Stores active user sessions (SSO sessions, client sessions) | Distributed with configurable owners |
+| **Authentication Session Cache** | Stores in-progress login flows | Distributed |
+| **Offline Session Cache** | Stores offline tokens/sessions | Distributed |
+| **Action Token Cache** | Stores one-time action tokens (password reset, email verification) | Distributed |
+
+### Cache Configuration
+
+The default cache configuration is suitable for most deployments. For advanced tuning, you can provide a custom Infinispan cache configuration via a ConfigMap:
+
+```yaml
+spec:
+  cache:
+    configMapFile:
+      name: keycloak-cache-config
+      key: cache-ispn.xml
+```
+
+<Directive type="warning" title="Custom Cache Configuration">
+Modifying the Infinispan cache configuration is an advanced operation. Incorrect settings can cause session loss, cache inconsistency, or cluster instability. The cache XML format and available options may change between Keycloak versions. Test thoroughly in a non-production environment before applying custom cache configurations.
+</Directive>
+
+### Cluster Discovery
+
+In Kubernetes, Keycloak uses the KUBE_PING or DNS_PING JGroups protocol for cluster discovery. The Operator configures this automatically. Ensure that:
+
+- Keycloak Pods can communicate on the JGroups port (default: `7800`).
+- Network policies do not block inter-Pod traffic on this port.
+- The Keycloak service account has permission to list Pods in the namespace (required for KUBE_PING).

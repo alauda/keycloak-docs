@@ -1,0 +1,199 @@
+---
+weight: 40
+---
+
+# Security Hardening
+
+This guide covers essential security configurations to harden a production Keycloak deployment. These settings protect against common attack vectors including brute force, token theft, and misconfigured redirects.
+
+## Brute Force Detection
+
+Keycloak can automatically detect and block brute force login attacks.
+
+### Enable Brute Force Detection
+
+1. In the Admin Console, go to **Realm Settings** > **Security defenses** > **Brute force detection** tab.
+2. Enable **Permanent lockout** or **Temporary lockout**.
+3. Configure the parameters:
+
+| Setting | Description | Recommended |
+|:--------|:------------|:------------|
+| **Max login failures** | Number of failed attempts before lockout | `5` |
+| **Wait increment** | How long the lockout lasts (seconds). Doubles on subsequent lockouts. | `60` |
+| **Max wait** | Maximum lockout duration (seconds) | `900` (15 min) |
+| **Quick login check (ms)** | Minimum time between login attempts. Faster attempts count as attacks. | `1000` |
+| **Failure reset time** | Time (seconds) after which the failure counter resets | `43200` (12 hours) |
+| **Permanent lockout** | If enabled, the user is permanently disabled after max failures | `Off` (use temporary lockout) |
+
+3. Click **Save**.
+
+<Directive type="info" title="Unlocking Users">
+Temporarily locked users are automatically unlocked after the wait period. Permanently locked users must be manually re-enabled by an administrator in the user's detail view.
+</Directive>
+
+## Admin Endpoint Protection
+
+The Keycloak Admin Console and Admin REST API should be restricted to authorized networks.
+
+### Restrict Admin Access via Network Policy
+
+Create a Kubernetes NetworkPolicy to limit access to the admin endpoints:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-admin-restrict
+  namespace: <namespace>
+spec:
+  podSelector:
+    matchLabels:
+      app: keycloak
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              purpose: admin
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - port: 8443
+          protocol: TCP
+```
+
+<Directive type="warning" title="Network Policy Support">
+Network policies require a CNI plugin that supports them (for example, Calico, Cilium). Verify your cluster's CNI supports NetworkPolicy enforcement.
+</Directive>
+
+### Separate Admin and Public Hostnames
+
+Keycloak supports configuring separate hostnames for the admin console and public-facing endpoints:
+
+```yaml
+spec:
+  hostname:
+    hostname: login.example.com
+    admin: admin-keycloak.internal.example.com
+```
+
+This allows the admin interface to be served on an internal-only hostname.
+
+## Redirect URI Validation
+
+Misconfigured redirect URIs can lead to open redirect vulnerabilities and authorization code interception.
+
+### Best Practices
+
+- **Never use wildcards** (`*`) in production redirect URIs. Use exact paths.
+- Register only the specific callback URLs your application uses.
+- Avoid registering `localhost` URIs in non-development environments.
+
+| Configuration | Risk Level | Example |
+|:--------------|:-----------|:--------|
+| `*` (wildcard) | **Critical** — allows redirect to any URL | Never use in production |
+| `https://app.example.com/*` | **Medium** — allows redirect to any path on the domain | Acceptable for development |
+| `https://app.example.com/callback` | **Low** — exact match | Recommended for production |
+
+## Clickjacking Protection
+
+Keycloak sets the `X-Frame-Options` and `Content-Security-Policy` headers to prevent clickjacking attacks.
+
+### Configure Headers
+
+1. Go to **Realm Settings** > **Security defenses** > **Headers** tab.
+2. Configure:
+
+| Header | Default | Description |
+|:-------|:--------|:------------|
+| **X-Frame-Options** | `SAMEORIGIN` | Prevents the login page from being embedded in an iframe on external sites |
+| **Content-Security-Policy** | `frame-src 'self'; ...` | Controls which sources can embed the Keycloak pages |
+| **X-Content-Type-Options** | `nosniff` | Prevents MIME type sniffing |
+| **X-XSS-Protection** | `1; mode=block` | Enables browser XSS filtering |
+| **Strict-Transport-Security** | `max-age=31536000; includeSubDomains` | Enforces HTTPS connections |
+
+3. Click **Save**.
+
+## Token Security
+
+### Limit Token Scope
+
+Use **Client Scopes** to restrict the claims included in tokens to only what each application needs. Avoid granting all scopes by default.
+
+### Audience Restriction
+
+Configure the **Audience** claim in access tokens to limit which resource servers accept the token:
+
+1. In the client's **Client scopes** > dedicated scope, add an **Audience** mapper.
+2. Set the **Included Client Audience** to the specific resource server client.
+3. Resource servers should validate the `aud` claim matches their own client ID.
+
+### Token Lifespan
+
+Minimize token lifespans to reduce the window of exposure for stolen tokens:
+
+| Token | Recommendation |
+|:------|:--------------|
+| **Access Token** | 60–300 seconds for web apps. Shorter for sensitive APIs. |
+| **Refresh Token** | Bind to session lifetime. Enable refresh token rotation. |
+| **ID Token** | Same as access token lifespan. Used only for authentication, not API access. |
+
+### Enable Refresh Token Rotation
+
+When enabled, each refresh token can only be used once. A new refresh token is issued with each token refresh request.
+
+1. Go to **Realm Settings** > **Tokens** tab.
+2. Enable **Revoke Refresh Token**.
+3. Set **Refresh Token Max Reuse** to `0` (single use).
+
+## SSL/HTTPS Enforcement
+
+1. Go to **Realm Settings** > **General** tab.
+2. Set **Require SSL** to:
+   - `external requests` — Requires HTTPS for all external connections (recommended).
+   - `all requests` — Requires HTTPS for all connections including internal.
+   - `none` — No SSL requirement (development only).
+
+For TLS configuration, see [Configure Ingress and TLS](./10-configure_ingress_tls.mdx).
+
+## CSRF Protection
+
+Keycloak includes built-in CSRF protection for the Admin Console and Account Console. No additional configuration is required.
+
+For custom themes or forms, ensure that all form submissions include the `${_csrf.token}` hidden field provided by Keycloak's template engine.
+
+## Read-Only User Attributes
+
+Certain user attributes should be protected from modification by end users:
+
+1. Go to **Realm Settings** > **User profile** tab.
+2. For sensitive attributes, set **Who can edit** to `Admin` only.
+3. Common attributes to protect: `email_verified`, `phone_number_verified`, custom administrative flags.
+
+## Vault Integration for Secrets
+
+Keycloak supports loading sensitive values (such as LDAP bind credentials, SMTP passwords, and IdP client secrets) from external vault sources instead of storing them in the database.
+
+### Kubernetes Secrets Vault
+
+In the Kubernetes Operator deployment model, Keycloak can resolve secrets from Kubernetes Secrets via the `KeycloakRealmImport` CR's `spec.placeholders` field. See [Manage Realms](../functions/20-manage_realms.mdx) for usage.
+
+For realm-level secrets configured via the Admin Console, use the vault syntax `${vault.<key>}` in secret fields. The Kubernetes Secrets vault provider resolves keys from files mounted in the Pod.
+
+<Directive type="info" title="External Vault Providers">
+Integration with external vault systems (such as HashiCorp Vault) may require a custom vault SPI provider. The availability and configuration of external vault providers depends on your Keycloak version and custom extensions. Refer to the upstream Keycloak documentation for the latest vault SPI options.
+</Directive>
+
+## Security Checklist
+
+| Item | Status |
+|:-----|:-------|
+| Brute force detection enabled | |
+| Admin console on internal hostname or restricted by network policy | |
+| No wildcard redirect URIs in production | |
+| SSL required for external requests | |
+| Access token lifespan under 300 seconds | |
+| Refresh token rotation enabled | |
+| Audience restriction configured for API clients | |
+| Security headers configured (X-Frame-Options, CSP, HSTS) | |
+| User profile attributes restricted from self-service editing | |
+| Admin accounts use strong passwords and MFA | |

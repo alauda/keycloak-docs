@@ -1,0 +1,208 @@
+---
+weight: 10
+---
+
+# Admin REST API
+
+Keycloak provides a comprehensive REST API for managing all aspects of the server programmatically. The Admin REST API supports the same operations available through the Admin Console.
+
+## API Base URL
+
+```
+https://<keycloak-host>/admin/realms/<realm>
+```
+
+All Admin REST API endpoints are relative to this base URL.
+
+## Authentication
+
+All API requests require a valid access token with admin privileges. There are two methods to obtain one.
+
+### Method 1: Username and Password
+
+Authenticate with an admin user's credentials:
+
+```bash
+ACCESS_TOKEN=$(curl -s -X POST \
+  "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+  -d "client_id=admin-cli" \
+  -d "username=<admin-user>" \
+  -d "password=<admin-password>" \
+  -d "grant_type=password" | jq -r '.access_token')
+```
+
+### Method 2: Service Account
+
+Use a confidential client with service account roles:
+
+1. Create a confidential client in the `master` Realm (or the target Realm).
+2. Enable **Service accounts roles**.
+3. Assign the appropriate admin roles to the service account (for example, `realm-admin`).
+4. Obtain a token using the `client_credentials` grant:
+
+```bash
+ACCESS_TOKEN=$(curl -s -X POST \
+  "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+  -d "client_id=<service-client-id>" \
+  -d "client_secret=<service-client-secret>" \
+  -d "grant_type=client_credentials" | jq -r '.access_token')
+```
+
+Service accounts are recommended for automation and CI/CD pipelines.
+
+### Use the Token
+
+Include the access token in the `Authorization` header:
+
+```bash
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users"
+```
+
+## Common API Operations
+
+### Realms
+
+```bash
+# List all realms
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms" | jq '.[].realm'
+
+# Get a specific realm
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>"
+
+# Create a realm
+curl -s -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://<keycloak-host>/admin/realms" \
+  -d '{"realm": "new-realm", "enabled": true}'
+```
+
+### Users
+
+```bash
+# List users (with pagination)
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users?first=0&max=20"
+
+# Search users
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users?search=john"
+
+# Get user by ID
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users/<user-id>"
+
+# Delete a user
+curl -s -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users/<user-id>"
+
+# Get user role mappings
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users/<user-id>/role-mappings"
+```
+
+### Clients
+
+```bash
+# List clients
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/clients"
+
+# Get client by ID
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/clients/<client-uuid>"
+
+# Get client secret
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/clients/<client-uuid>/client-secret"
+
+# Regenerate client secret
+curl -s -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/clients/<client-uuid>/client-secret"
+```
+
+### Roles
+
+```bash
+# List realm roles
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/roles"
+
+# Create a realm role
+curl -s -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://<keycloak-host>/admin/realms/<realm>/roles" \
+  -d '{"name": "my-role", "description": "My custom role"}'
+
+# Assign realm role to user
+curl -s -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://<keycloak-host>/admin/realms/<realm>/users/<user-id>/role-mappings/realm" \
+  -d '[{"id": "<role-id>", "name": "my-role"}]'
+```
+
+### Groups
+
+```bash
+# List groups
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/groups"
+
+# Add user to group
+curl -s -X PUT -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users/<user-id>/groups/<group-id>"
+```
+
+### Identity Providers
+
+```bash
+# List identity providers
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/identity-provider/instances"
+```
+
+### Events
+
+```bash
+# Get login events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/events?first=0&max=100"
+
+# Get admin events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/admin-events?first=0&max=100"
+```
+
+## Pagination
+
+Most list endpoints support pagination via `first` (offset) and `max` (page size) query parameters:
+
+```bash
+# Get users 20-39
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users?first=20&max=20"
+```
+
+## Error Handling
+
+The API returns standard HTTP status codes:
+
+| Code | Meaning |
+|:-----|:--------|
+| `200` | Success |
+| `201` | Resource created |
+| `204` | Success (no content) |
+| `400` | Bad request (invalid parameters) |
+| `401` | Unauthorized (missing or expired token) |
+| `403` | Forbidden (insufficient permissions) |
+| `404` | Resource not found |
+| `409` | Conflict (for example, duplicate username) |
+
+## Full API Reference
+
+For the complete API specification, refer to the upstream Keycloak REST API documentation:
+
+- **OpenAPI Specification**: Available at `https://<keycloak-host>/admin/realms/<realm>` (explore with tools like Swagger UI).
+- **Upstream Documentation**: The Keycloak project maintains a full API reference at the official Keycloak documentation site.

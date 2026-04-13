@@ -1,0 +1,204 @@
+---
+weight: 50
+---
+
+# Customize Themes
+
+Keycloak themes control the look and feel of the login page, account console, admin console, and email templates. This guide covers customizing themes in a Kubernetes Operator-managed deployment.
+
+## Theme Types
+
+| Theme Type | What It Controls |
+|:-----------|:----------------|
+| **Login** | Login, registration, password reset, and OTP pages |
+| **Account** | User self-service account management console |
+| **Admin** | Admin Console UI |
+| **Email** | Email templates (verification, password reset, event notifications) |
+| **Welcome** | Welcome page shown at the root URL |
+
+## Select a Theme
+
+To switch between built-in themes:
+
+1. In the Admin Console, go to **Realm Settings** > **Themes** tab.
+2. Select the desired theme for each type (Login, Account, Admin, Email).
+3. Click **Save**.
+
+Built-in themes include `keycloak` (default) and `keycloak.v2` (for the new account console).
+
+## Create a Custom Theme
+
+A custom theme is a directory (or JAR archive) containing the files that override or extend a base theme.
+
+### Theme Directory Structure
+
+```
+my-custom-theme/
+└── login/                      # Theme type (login, account, admin, email)
+    ├── theme.properties        # Theme configuration
+    ├── resources/
+    │   ├── css/
+    │   │   └── custom.css      # Custom stylesheets
+    │   └── img/
+    │       └── logo.png        # Custom logo
+    ├── messages/
+    │   ├── messages_en.properties  # English text overrides
+    │   └── messages_zh.properties  # Chinese text overrides
+    └── login.ftl               # Custom FreeMarker login page template (optional)
+```
+
+### theme.properties
+
+```properties
+# Inherit from the default Keycloak theme
+parent=keycloak
+import=common/keycloak
+
+# Add custom stylesheet
+styles=css/custom.css
+
+# Set custom logo (overrides the Keycloak logo)
+# kcLogoLink=https://my-company.example.com
+```
+
+### Custom CSS Example
+
+Create `resources/css/custom.css`:
+
+```css
+/* Override the login page background */
+.login-pf body {
+    background-color: #1a1a2e;
+}
+
+/* Override the login card */
+#kc-login {
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+/* Custom logo size */
+#kc-logo-wrapper img {
+    max-height: 60px;
+}
+```
+
+### Override Text Labels
+
+Create `messages/messages_en.properties`:
+
+```properties
+loginAccountTitle=Sign in to My Company
+loginTitle=Welcome
+loginTitleHtml=Welcome to <strong>My Company</strong>
+```
+
+## Deploy Themes in Kubernetes
+
+In a Kubernetes Operator-managed deployment, custom themes must be made available to the Keycloak Pods. There are two approaches.
+
+### Option A: ConfigMap (Recommended for Small Themes)
+
+1. Package the theme directory into a ConfigMap:
+
+```bash
+kubectl create configmap keycloak-custom-theme \
+  --from-file=my-custom-theme/ \
+  -n <namespace>
+```
+
+2. Mount the ConfigMap into the Keycloak Pod via the `Keycloak` CR:
+
+```yaml
+spec:
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - volumeMounts:
+              - name: custom-theme
+                mountPath: /opt/keycloak/themes/my-custom-theme
+        volumes:
+          - name: custom-theme
+            configMap:
+              name: keycloak-custom-theme
+```
+
+3. Apply the updated CR and wait for Pods to restart.
+4. In the Admin Console, go to **Realm Settings** > **Themes** and select `my-custom-theme`.
+
+<Directive type="info" title="ConfigMap Size Limit">
+ConfigMaps have a 1 MiB size limit. For themes with large images or many files, use the custom image approach instead.
+</Directive>
+
+### Option B: Custom Keycloak Image (Recommended for Production)
+
+Build a custom container image with the theme pre-installed:
+
+```dockerfile
+FROM quay.io/keycloak/keycloak:26.4.7
+
+# Copy custom theme
+COPY my-custom-theme /opt/keycloak/themes/my-custom-theme
+
+# Rebuild Keycloak with the theme
+RUN /opt/keycloak/bin/kc.sh build
+```
+
+Build and push the image:
+
+```bash
+docker build -t my-registry.example.com/keycloak-custom:26.4.7 .
+docker push my-registry.example.com/keycloak-custom:26.4.7
+```
+
+Update the `Keycloak` CR to use the custom image:
+
+```yaml
+spec:
+  image: my-registry.example.com/keycloak-custom:26.4.7
+```
+
+<Directive type="warning" title="Image Maintenance">
+When using a custom image, you must rebuild and redeploy the image whenever Keycloak is upgraded to a new version. Ensure your CI/CD pipeline includes this step.
+</Directive>
+
+## Customize Email Templates
+
+Email templates use FreeMarker (.ftl) syntax and are part of the `email` theme type.
+
+### Override an Email Template
+
+1. In your custom theme, create `email/html/` and `email/text/` directories.
+2. Copy the template you want to customize from the default theme.
+3. Modify the template content.
+
+Common email templates:
+
+| Template | Triggered By |
+|:---------|:-------------|
+| `email-verification.ftl` | Email verification required action |
+| `password-reset.ftl` | Password reset request |
+| `event-login_error.ftl` | Failed login notification |
+| `executeActions.ftl` | Required actions email |
+
+### Email Message Customization
+
+Override email subject lines and body text in `messages/messages_en.properties`:
+
+```properties
+emailVerificationSubject=Verify your My Company account
+passwordResetSubject=My Company - Password Reset
+```
+
+## Internationalization (i18n)
+
+Keycloak themes support multiple languages via message properties files.
+
+1. Enable internationalization in **Realm Settings** > **Localization** tab.
+2. Add supported locales.
+3. In your custom theme, create message files for each locale:
+   - `messages/messages_en.properties`
+   - `messages/messages_zh_CN.properties`
+   - `messages/messages_ja.properties`
+4. Set the default locale in the Realm settings.

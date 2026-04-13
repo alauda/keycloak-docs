@@ -1,0 +1,105 @@
+---
+weight: 50
+---
+
+# Extensibility
+
+Keycloak is built on a modular architecture with **Service Provider Interfaces (SPIs)** that allow developers to extend nearly every aspect of the system. This page provides an overview of extension points and the deployment model for Kubernetes environments.
+
+## Extension Points
+
+| SPI | Purpose | Example Use Case |
+|:----|:--------|:-----------------|
+| **Authenticator** | Custom authentication steps in login flows | SMS OTP verification, custom challenge questions |
+| **User Storage** | Connect to custom user databases or APIs | Legacy database integration, HR system user lookup |
+| **Protocol Mapper** | Custom claims in OIDC tokens or SAML assertions | Add department, cost center, or entitlements to tokens |
+| **Event Listener** | React to login and admin events | Send events to an external SIEM, audit log system, or messaging queue |
+| **Required Action** | Custom actions users must complete on login | Terms of service acceptance, phone number verification |
+| **Identity Provider** | Custom external identity provider integration | Connect to a proprietary SSO system |
+| **Theme** | Custom login, account, and email UI | Corporate branding, custom registration forms |
+| **Policy Provider** | Custom authorization policy types | Geo-location based access control, IP allowlisting |
+| **Vault** | Custom secret storage backend | Integration with HashiCorp Vault or AWS Secrets Manager |
+
+## Developing a Custom Extension
+
+Custom extensions are developed as Java libraries that implement Keycloak SPIs. The general pattern:
+
+1. Implement the SPI's `Provider` interface (the runtime logic).
+2. Implement the SPI's `ProviderFactory` interface (instantiation and configuration).
+3. Register the factory in `META-INF/services/` (Java ServiceLoader mechanism).
+4. Package as a JAR file.
+
+<Directive type="info" title="Developer Reference">
+The full SPI development guide is maintained in the upstream Keycloak documentation. This page focuses on the deployment model specific to Alauda Build of Keycloak on Kubernetes. For SPI implementation details, refer to the upstream Keycloak Server Developer Guide.
+</Directive>
+
+## Deploying Extensions in Kubernetes
+
+Keycloak 26.x (Quarkus-based) has a different extension deployment model than legacy Keycloak/RH-SSO (WildFly-based). Extensions must be available at **build time** so the Quarkus optimized runtime can include them.
+
+### Recommended: Custom Image Build
+
+Build a custom Keycloak image with your extensions included:
+
+```dockerfile
+FROM quay.io/keycloak/keycloak:26.4.7 as builder
+
+# Copy custom provider JARs
+COPY my-custom-authenticator.jar /opt/keycloak/providers/
+COPY my-custom-mapper.jar /opt/keycloak/providers/
+
+# Rebuild Keycloak to include the new providers
+RUN /opt/keycloak/bin/kc.sh build
+
+FROM quay.io/keycloak/keycloak:26.4.7
+
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+```
+
+Update the `Keycloak` CR to use the custom image:
+
+```yaml
+spec:
+  image: my-registry.example.com/keycloak-custom:26.4.7
+```
+
+<Directive type="warning" title="Build vs Runtime Providers">
+In Keycloak 26.x (Quarkus), most providers must be present during the `kc.sh build` step. Simply mounting a JAR at runtime via a volume may not work for all provider types. Always use the custom image approach for production deployments.
+</Directive>
+
+### Alternative: Init Container
+
+For development or testing, you can use an init container to copy provider JARs into the Keycloak providers directory:
+
+```yaml
+spec:
+  unsupported:
+    podTemplate:
+      spec:
+        initContainers:
+          - name: copy-providers
+            image: my-registry.example.com/keycloak-providers:latest
+            command: ["cp", "-r", "/providers/.", "/target/"]
+            volumeMounts:
+              - name: providers
+                mountPath: /target
+        containers:
+          - volumeMounts:
+              - name: providers
+                mountPath: /opt/keycloak/providers
+        volumes:
+          - name: providers
+            emptyDir: {}
+```
+
+<Directive type="warning" title="Limitation">
+The init container approach does not run `kc.sh build`, so it only works for providers that support runtime deployment (hot deployment). For full compatibility, use the custom image approach.
+</Directive>
+
+## Versioning and Compatibility
+
+- Extension JARs must be compiled against the same Keycloak version used in the deployment.
+- When upgrading Keycloak, rebuild and test all custom extensions against the new version.
+- Extensions that use internal Keycloak APIs (not public SPIs) may break between minor versions.

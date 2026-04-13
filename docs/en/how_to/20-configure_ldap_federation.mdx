@@ -1,0 +1,178 @@
+---
+weight: 20
+---
+
+# Configure LDAP / Active Directory Federation
+
+This guide walks through setting up LDAP or Microsoft Active Directory user federation in Keycloak, enabling users from your corporate directory to authenticate without migrating credentials.
+
+For background concepts, see [Identity Federation](../concepts/30-identity_federation.mdx).
+
+## Prerequisites
+
+- A running Keycloak instance with admin access.
+- Network connectivity from Keycloak Pods to the LDAP/AD server.
+- An LDAP bind account with read access to the user directory (and write access if using `WRITABLE` edit mode).
+- The LDAP base DN and user search filter for your directory structure.
+
+## Step 1: Add the LDAP Provider
+
+1. In the Admin Console, select the target Realm.
+2. Go to **User federation** in the left navigation bar.
+3. Click **Add LDAP providers**.
+4. Configure the connection settings:
+
+| Field | Description | Example |
+|:------|:------------|:--------|
+| **Console Display Name** | A friendly name for this provider | `Corporate AD` |
+| **Vendor** | The directory vendor. Optimizes default settings. | `Active Directory`, `Red Hat Directory Server`, `Other` |
+| **Connection URL** | LDAP server URL | `ldaps://ldap.example.com:636` |
+| **Enable StartTLS** | Use StartTLS for LDAP connections on port 389 | `Off` (use `ldaps://` instead) |
+| **Bind Type** | `simple` for username/password bind | `simple` |
+| **Bind DN** | The DN of the service account used by Keycloak | `cn=keycloak-svc,ou=ServiceAccounts,dc=example,dc=com` |
+| **Bind Credential** | The password for the bind DN | *(enter the password)* |
+
+5. Click **Test connection** to verify connectivity.
+6. Click **Test authentication** to verify bind credentials.
+
+## Step 2: Configure User Search
+
+| Field | Description | Example |
+|:------|:------------|:--------|
+| **Edit Mode** | How Keycloak interacts with LDAP — see the table below | `READ_ONLY` |
+| **Users DN** | The base DN for user searches | `ou=Users,dc=example,dc=com` |
+| **Username LDAP attribute** | The LDAP attribute mapped to Keycloak username | `sAMAccountName` (AD) or `uid` (LDAP) |
+| **RDN LDAP attribute** | The LDAP attribute used as the RDN | `cn` |
+| **UUID LDAP attribute** | The LDAP attribute used as the unique ID | `objectGUID` (AD) or `entryUUID` (LDAP) |
+| **User Object Classes** | LDAP objectClass filter for users | `person, organizationalPerson, user` (AD) |
+| **Search Scope** | `One Level` or `Subtree` (includes nested OUs) | `Subtree` |
+| **Custom User LDAP Filter** | Additional LDAP filter to narrow results | `(memberOf=cn=AppUsers,ou=Groups,dc=example,dc=com)` |
+
+### Edit Modes
+
+| Mode | Description | Use Case |
+|:-----|:------------|:---------|
+| **READ_ONLY** | Keycloak reads from LDAP but never writes back. Password changes go through LDAP directly. | When Keycloak should not modify the directory |
+| **WRITABLE** | Keycloak can update user attributes and passwords in LDAP. | When Keycloak manages the full user lifecycle |
+| **UNSYNCED** | Keycloak stores changes locally without writing to LDAP. | Temporary overrides or testing |
+
+## Step 3: Configure Synchronization
+
+Synchronization imports user data from LDAP into Keycloak's local cache for faster lookups.
+
+| Setting | Description | Recommended |
+|:--------|:------------|:------------|
+| **Import Users** | Whether to import LDAP users into Keycloak's local database | `On` |
+| **Periodic Full Sync** | Enable scheduled full synchronization | `On` |
+| **Full Sync Period** | Interval in seconds for full sync | `86400` (daily) |
+| **Periodic Changed Users Sync** | Enable incremental sync of recently modified users | `On` |
+| **Changed Users Sync Period** | Interval in seconds for changed-user sync | `3600` (hourly) |
+
+Click **Save**, then click **Synchronize all users** to perform the initial import.
+
+Verify the import by going to **Users** and searching for LDAP users.
+
+## Step 4: Configure LDAP Mappers
+
+LDAP Mappers define how LDAP attributes are mapped to Keycloak user attributes, groups, and roles.
+
+### Default Mappers
+
+When the LDAP provider is created, Keycloak auto-creates several default mappers. Review them in the **Mappers** tab:
+
+| Mapper | Type | Description |
+|:-------|:-----|:------------|
+| **username** | user-attribute-ldap-mapper | Maps `sAMAccountName` (or `uid`) to Keycloak `username` |
+| **email** | user-attribute-ldap-mapper | Maps `mail` to Keycloak `email` |
+| **first name** | user-attribute-ldap-mapper | Maps `givenName` to Keycloak `firstName` |
+| **last name** | user-attribute-ldap-mapper | Maps `sn` to Keycloak `lastName` |
+
+### Add a Group Mapper
+
+To synchronize LDAP groups to Keycloak groups:
+
+1. In the LDAP provider detail, click the **Mappers** tab.
+2. Click **Add mapper**.
+3. Select **group-ldap-mapper**.
+4. Configure:
+
+| Field | Description | Example |
+|:------|:------------|:--------|
+| **LDAP Groups DN** | Base DN for group searches | `ou=Groups,dc=example,dc=com` |
+| **Group Name LDAP Attribute** | LDAP attribute for group name | `cn` |
+| **Group Object Classes** | LDAP objectClass for groups | `groupOfNames` or `group` (AD) |
+| **Membership LDAP Attribute** | LDAP attribute listing group members | `member` |
+| **Membership Attribute Type** | `DN` or `UID` | `DN` |
+| **Drop non-existing groups during sync** | Remove Keycloak groups not found in LDAP | `Off` (recommended for safety) |
+
+5. Click **Save**, then click **Sync LDAP groups to Keycloak**.
+
+### Add a Role Mapper
+
+To map LDAP groups directly to Keycloak Realm roles:
+
+1. Click **Add mapper** > **role-ldap-mapper**.
+2. Configure the LDAP roles DN, role object classes, and membership attributes (similar to group mapper).
+3. Set **Use Realm Roles Mapping** to `On`.
+4. Click **Save** and sync.
+
+## Step 5: Configure LDAP over TLS
+
+For production environments, always use encrypted LDAP connections.
+
+### Option A: LDAPS (Recommended)
+
+Use `ldaps://` in the Connection URL (port 636):
+
+```
+ldaps://ldap.example.com:636
+```
+
+If the LDAP server uses a certificate signed by a custom CA, import the CA certificate into the Keycloak truststore. In a Kubernetes-managed deployment, mount the CA certificate and configure the JVM truststore via the `Keycloak` CR:
+
+```yaml
+spec:
+  additionalOptions:
+    - name: spi-truststore-file-file
+      value: /opt/keycloak/certs/truststore.jks
+    - name: spi-truststore-file-password
+      secret:
+        name: keycloak-truststore-secret
+        key: password
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - volumeMounts:
+              - name: truststore
+                mountPath: /opt/keycloak/certs
+        volumes:
+          - name: truststore
+            secret:
+              secretName: keycloak-truststore
+```
+
+<Directive type="warning" title="Truststore Configuration">
+The exact mechanism for configuring custom truststores may vary between Keycloak versions. Verify the truststore SPI configuration options in the upstream Keycloak documentation for your specific version before applying this configuration.
+</Directive>
+
+### Option B: StartTLS
+
+Use `ldap://` with StartTLS enabled (port 389):
+
+```
+ldap://ldap.example.com:389
+```
+
+Enable **StartTLS** in the LDAP provider configuration. The same CA certificate truststore configuration applies.
+
+## Troubleshooting
+
+| Symptom | Possible Cause | Resolution |
+|:--------|:---------------|:-----------|
+| **Connection test fails** | Network policy blocking LDAP port, incorrect URL | Verify Pod-to-LDAP connectivity with `kubectl exec` and test with `ldapsearch` |
+| **Authentication test fails** | Incorrect Bind DN or credentials | Verify the Bind DN format matches your directory structure |
+| **No users found after sync** | Incorrect Users DN or User Object Classes | Check the Users DN matches the actual LDAP tree. Use `Subtree` search scope for nested OUs. |
+| **Users visible but cannot log in** | Edit Mode set to `UNSYNCED` without local passwords | Set Edit Mode to `READ_ONLY` for LDAP-authenticated logins |
+| **Group sync returns empty** | Incorrect Group Object Classes or Membership Attribute | Verify objectClass and membership attribute names match your directory schema (`groupOfNames` vs `group`) |
+| **SSL/TLS handshake failure** | Missing CA certificate in truststore | Import the LDAP server's CA certificate into the Keycloak JVM truststore |

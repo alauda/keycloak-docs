@@ -1,0 +1,118 @@
+---
+weight: 55
+---
+
+# Manage Sessions
+
+Keycloak maintains user sessions to track authenticated users across applications. This guide covers viewing, configuring, and managing user sessions.
+
+## View Active Sessions
+
+### Realm Sessions
+
+1. In the Admin Console, go to **Sessions**.
+2. The overview shows the total number of active sessions and a breakdown by client.
+
+### Per-User Sessions
+
+1. Go to **Users** and select a user.
+2. Click the **Sessions** tab.
+3. View all active sessions for that user, including:
+   - Session start time
+   - Last access time
+   - IP address
+   - Clients accessed within the session
+
+### Per-Client Sessions
+
+1. Go to **Clients** and select a client.
+2. Click the **Sessions** tab.
+3. View all active sessions for that client.
+
+## Terminate Sessions
+
+### Log Out a Single User
+
+1. Go to **Users** > select the user > **Sessions** tab.
+2. Click **Sign out** on a specific session, or **Sign out all sessions** to terminate all sessions for that user.
+
+### Log Out All Users in a Realm
+
+1. Go to **Sessions**.
+2. Click **Sign out all active sessions**.
+
+<Directive type="warning" title="Impact">
+Signing out all sessions forces every user in the Realm to re-authenticate on their next request. Use this only during security incidents or planned maintenance.
+</Directive>
+
+### Revocation Policy
+
+A revocation policy invalidates all tokens issued before a specific time:
+
+1. Go to **Sessions** > **Revocation**.
+2. Click **Set to now** or specify a custom **Not Before** date/time.
+3. Click **Push**.
+4. All tokens issued before the specified time are considered invalid.
+
+## Session Timeout Configuration
+
+Configure session timeouts in **Realm Settings** > **Sessions** tab.
+
+### SSO Session Timeouts
+
+| Setting | Description | Default |
+|:--------|:------------|:--------|
+| **SSO Session Idle** | Maximum idle time before the SSO session expires. The user must re-authenticate after being idle for this duration. | 30 minutes |
+| **SSO Session Max** | Maximum total duration of an SSO session, regardless of activity. | 10 hours |
+| **SSO Session Idle Remember Me** | Idle timeout when "Remember Me" is enabled. Set to `0` to use the standard idle timeout. | 0 (disabled) |
+| **SSO Session Max Remember Me** | Maximum session duration when "Remember Me" is enabled. Set to `0` to use the standard max timeout. | 0 (disabled) |
+
+### Client Session Timeouts
+
+| Setting | Description | Default |
+|:--------|:------------|:--------|
+| **Client Session Idle** | Maximum idle time for a client-level session (scoped to a single client within the SSO session). | 0 (uses SSO Session Idle) |
+| **Client Session Max** | Maximum duration for a client-level session. | 0 (uses SSO Session Max) |
+
+### Token Timeouts
+
+| Setting | Description | Default |
+|:--------|:------------|:--------|
+| **Access Token Lifespan** | How long an access token is valid | 5 minutes |
+| **Access Token Lifespan For Implicit Flow** | Access token lifespan for the implicit flow | 15 minutes |
+| **Client login timeout** | Maximum time to complete the login flow after the authorization request | 5 minutes |
+| **Login timeout** | Maximum time a login page can remain open before it expires | 30 minutes |
+| **Login action timeout** | Maximum time to complete a login action (for example, email verification) | 5 minutes |
+
+## Offline Sessions
+
+**Offline sessions** allow applications to maintain long-lived refresh tokens that persist beyond the normal SSO session lifetime. This is used for applications that need to perform background operations on behalf of the user.
+
+### Configure Offline Sessions
+
+1. Go to **Realm Settings** > **Sessions** tab.
+2. Configure:
+
+| Setting | Description | Default |
+|:--------|:------------|:--------|
+| **Offline Session Idle** | Maximum idle time for offline sessions | 30 days |
+| **Offline Session Max Limited** | Enable to set a maximum lifetime for offline sessions | Off |
+| **Offline Session Max** | Maximum duration of an offline session (if enabled) | 60 days |
+
+### Grant Offline Access
+
+For a client to request offline tokens:
+
+1. Include the `offline_access` scope in the authorization request.
+2. The client must have the `offline_access` scope assigned (either as default or optional).
+3. The user must have the `offline_access` role (included by default in the `offline_access` scope).
+
+## Remember Me
+
+The **Remember Me** feature allows users to extend their session duration by checking a "Remember Me" box on the login page.
+
+### Enable Remember Me
+
+1. Go to **Realm Settings** > **Login** tab.
+2. Enable **Remember me**.
+3. Configure the "Remember Me" session timeouts in the **Sessions** tab (SSO Session Idle Remember Me, SSO Session Max Remember Me).

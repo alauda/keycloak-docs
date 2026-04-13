@@ -1,0 +1,126 @@
+---
+weight: 35
+---
+
+# Import and Export
+
+Keycloak supports importing and exporting Realm configurations for backup, migration, and environment replication purposes.
+
+## Export Methods
+
+### Export via Admin Console (Partial Export)
+
+1. In the Admin Console, select the target Realm.
+2. Go to **Realm Settings** > **Action** menu (top right) > **Partial export**.
+3. Select what to include:
+   - **Groups and related roles**
+   - **Clients**
+   - **Roles**
+4. Click **Export**.
+5. A JSON file is downloaded containing the selected Realm configuration.
+
+<Directive type="info" title="Partial Export Limitations">
+Partial export does not include user data, secrets, or credentials. It exports only the structural configuration (clients, roles, groups, authentication flows, etc.).
+</Directive>
+
+### Export via CLI (Full Export)
+
+For a full export including users and credentials, use the Keycloak CLI export command. In a Kubernetes environment, run this as a Job or exec into a Pod:
+
+```bash
+# Exec into the Keycloak Pod
+kubectl exec -it <keycloak-pod> -n <namespace> -- \
+  /opt/keycloak/bin/kc.sh export \
+    --dir /tmp/export \
+    --realm <realm-name> \
+    --users realm_file
+```
+
+Export options:
+
+| Option | Description |
+|:-------|:------------|
+| `--dir <path>` | Output directory for the export files |
+| `--file <path>` | Output to a single file (alternative to `--dir`) |
+| `--realm <name>` | Export a specific realm (omit to export all realms) |
+| `--users realm_file` | Include users in the realm export file |
+| `--users same_file` | Include users in the same file (for single-file export) |
+| `--users skip` | Exclude users from the export |
+| `--users different_files` | Export users to separate files (for large user sets) |
+
+<Directive type="warning" title="Server Restart Required">
+The Keycloak CLI export command requires the server to be stopped or run in a special export mode. In Kubernetes, this is best done as a one-off Job or by scaling down the deployment, running the export, and scaling back up. Alternatively, use the Admin REST API for live exports.
+</Directive>
+
+### Export via REST API
+
+Use the Admin REST API for live, non-disruptive partial exports:
+
+```bash
+# Export a realm (does not include secrets or user credentials)
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>" | jq . > realm-export.json
+
+# Export users
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/users?max=1000" | jq . > users-export.json
+
+# Export clients
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/clients" | jq . > clients-export.json
+```
+
+## Import Methods
+
+### Import via KeycloakRealmImport CRD (Recommended)
+
+The declarative CRD-based approach is the preferred method for Kubernetes deployments. See [Manage Realms](../functions/20-manage_realms.mdx) for details.
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: my-realm-import
+spec:
+  keycloakCRName: example-kc
+  realm:
+    # Full realm JSON embedded here
+```
+
+### Import via CLI (Startup Import)
+
+Place export files in a directory and configure Keycloak to import on startup:
+
+```bash
+kubectl exec -it <keycloak-pod> -n <namespace> -- \
+  /opt/keycloak/bin/kc.sh import \
+    --dir /tmp/export \
+    --override true
+```
+
+| Option | Description |
+|:-------|:------------|
+| `--dir <path>` | Directory containing export files to import |
+| `--file <path>` | Import from a single file |
+| `--override true` | Overwrite existing realm configuration if the realm already exists |
+
+### Import via Admin Console
+
+1. Go to **Create Realm** (top-left dropdown > **Create Realm**).
+2. Click **Browse** and select a realm export JSON file.
+3. Click **Create**.
+
+This method creates a new realm from the JSON file. It does not merge into existing realms.
+
+## Migration Between Environments
+
+To replicate a Keycloak configuration from one environment to another:
+
+1. Export the realm from the source environment (using partial export or REST API).
+2. Review and sanitize the export:
+   - Remove environment-specific URLs and hostnames.
+   - Remove or replace client secrets (use `KeycloakRealmImport` placeholders for secrets).
+   - Update redirect URIs to match the target environment.
+3. Import into the target environment using the `KeycloakRealmImport` CRD.
+
+For migration from Red Hat Single Sign-On, see [Migrate from RH-SSO](./30-migrate_from_rhsso.mdx).
