@@ -30,10 +30,25 @@ The following categories of metrics are available:
 
 | Category | Example Metrics | Description |
 |:---------|:----------------|:------------|
-| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds` | Java Virtual Machine resource usage |
-| **HTTP** | `http_server_requests_seconds`, `http_server_active_requests` | Request count, latency, and active connections |
-| **Database** | `agroal_active_connections`, `agroal_awaiting_connections` | Database connection pool usage |
-| **Keycloak Events** | `keycloak_logins_total`, `keycloak_login_errors_total` | Authentication success and failure counts per Realm |
+| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live_threads` | Java Virtual Machine memory, GC, and thread usage |
+| **HTTP** | `http_server_requests_seconds_count`, `http_server_requests_seconds_sum`, `http_server_active_requests` | Request count, cumulative latency, and active connections. Use `_count` and `_sum` to calculate average request latency. |
+| **Database** | `agroal_active_connections`, `agroal_awaiting_connections`, `agroal_max_used_connections` | Database connection pool usage, contention, and peak utilization |
+| **Keycloak Login Events** | `keycloak_logins_total`, `keycloak_login_errors_total`, `keycloak_failed_login_attempts_total` | Authentication success and failure counts per Realm. Use `login_errors_total` to monitor brute force or credential issues. |
+| **Keycloak Registration** | `keycloak_registrations_total`, `keycloak_registrations_errors_total` | User self-registration events per Realm |
+| **Keycloak Client Login** | `keycloak_client_login_total`, `keycloak_client_login_errors_total` | Service account (client credentials) authentication events |
+| **Infinispan / Cache** | `vendor_cache_manager_*`, `vendor_statistics_*` | Distributed cache hit/miss ratios and cluster state (when cache statistics are enabled) |
+
+### Recommended Alerting Indicators
+
+The following metrics are recommended as starting points for alerting rules:
+
+| Indicator | Metric / Query | Alert Condition |
+|:----------|:---------------|:----------------|
+| **Login failure rate** | `rate(keycloak_login_errors_total[5m])` | Spike above baseline indicates brute force or configuration issues |
+| **HTTP error rate** | `rate(http_server_requests_seconds_count{status=~"5.."}[5m])` | 5xx errors above threshold indicate server problems |
+| **Database pool exhaustion** | `agroal_awaiting_connections > 0` | Requests waiting for DB connections indicate pool sizing issues |
+| **JVM memory pressure** | `jvm_memory_used_bytes / jvm_memory_max_bytes > 0.9` | High heap utilization may indicate memory leak or undersizing |
+| **Health probe failure** | Kubernetes probe failure events | Liveness or readiness probe failures indicate instance instability |
 
 ## Configure Prometheus Scraping
 
@@ -106,7 +121,31 @@ For a complete observability stack, combine Keycloak's built-in capabilities wit
 | **Tracing** | OpenTelemetry (if enabled) | Tempo, Jaeger |
 
 <Directive type="info" title="Distributed Tracing">
-Keycloak 26.x supports OpenTelemetry-based distributed tracing. Enabling tracing and configuring the OTLP exporter endpoint are done via `additionalOptions` in the Keycloak CR. Tracing configuration details depend on your specific observability backend and are beyond the scope of this guide. Refer to the upstream Keycloak Observability documentation for setup instructions.
+Keycloak 26.x supports OpenTelemetry-based distributed tracing. The Keycloak Operator provides first-class tracing configuration fields in the `Keycloak` CR:
+
+```yaml
+spec:
+  tracing:
+    enabled: true
+    endpoint: "http://tempo.observability:4317"
+    samplerType: traceidratio
+    samplerRatio: 0.1
+```
+
+Available `spec.tracing` fields:
+
+| Field | Description | Default |
+|:------|:------------|:--------|
+| `enabled` | Enable OpenTelemetry tracing | `false` |
+| `endpoint` | OTLP collector endpoint URL | — |
+| `protocol` | Telemetry protocol (`grpc` or `http/protobuf`) | `grpc` |
+| `samplerType` | Sampler type (`traceidratio`, `always_on`, `always_off`) | `traceidratio` |
+| `samplerRatio` | Sampling probability (0.0 to 1.0) | — |
+| `compression` | Payload compression (`gzip` or `none`) | disabled |
+| `serviceName` | Service name in exported traces | — |
+| `resourceAttributes` | Additional key-value attributes for trace resources | — |
+
+Use `spec.tracing` for all standard tracing configuration. Only use `additionalOptions` for tracing-related options not covered by the first-class fields above.
 </Directive>
 
 ## Event Auditing

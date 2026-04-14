@@ -91,9 +91,10 @@ spec:
 The `KeycloakRealmImport` CRD performs a **one-time import** when the resource is created. It is not a continuous synchronization controller — subsequent changes made via the Admin Console or REST API are **not** reflected back to the CR, and updating the CR does not automatically re-apply changes to an existing Realm.
 
 Specifically:
-- It creates or merges Realm configuration at import time.
+- It creates a new Realm at import time. If a Realm with the same name already exists, the import will not overwrite or update the existing Realm.
 - It does not track or reconcile ongoing Realm state.
 - Modifying the CR after the initial import does not trigger a re-import automatically.
+- It does not delete Realms or Realm objects — it is a create-only mechanism.
 - It should not be relied upon as a full lifecycle management or GitOps sync mechanism.
 
 For ongoing Realm configuration changes after initial import, use the Admin Console or Admin REST API.

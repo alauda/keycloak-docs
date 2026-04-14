@@ -107,8 +107,10 @@ FROM quay.io/keycloak/keycloak:26.4.7
 # Copy custom theme
 COPY my-custom-theme /opt/keycloak/themes/my-custom-theme
 
-# Rebuild Keycloak with the theme
-RUN /opt/keycloak/bin/kc.sh build
+# Rebuild Keycloak with the theme — include any build-time options here
+RUN /opt/keycloak/bin/kc.sh build \
+  --health-enabled=true \
+  --metrics-enabled=true
 ```
 
 Build and push the image:
@@ -125,8 +127,10 @@ spec:
   image: my-registry.example.com/keycloak-custom:26.4.7
 ```
 
-<Directive type="warning" title="Image Maintenance">
-When using a custom image, you must rebuild and redeploy the image whenever Keycloak is upgraded to a new version. Ensure your CI/CD pipeline includes this step.
+<Directive type="warning" title="Build-Time Options in Custom Images">
+When using a custom image, you must include all required build-time options (such as `--health-enabled=true` and `--metrics-enabled=true`) in the `kc.sh build` command inside the Dockerfile. Build-time options specified via `additionalOptions` in the Keycloak CR are ignored when a pre-built custom image is used, because the Operator does not re-run the build step.
+
+You must also rebuild and redeploy the image whenever Keycloak is upgraded to a new version. Ensure your CI/CD pipeline includes this step.
 </Directive>
 
 ### Option B: ConfigMap (Development and Testing Only)

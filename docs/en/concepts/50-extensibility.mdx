@@ -55,7 +55,10 @@ COPY my-custom-authenticator.jar /opt/keycloak/providers/
 COPY my-custom-mapper.jar /opt/keycloak/providers/
 
 # Rebuild Keycloak to include the new providers
-RUN /opt/keycloak/bin/kc.sh build
+# Include all required build-time options here
+RUN /opt/keycloak/bin/kc.sh build \
+  --health-enabled=true \
+  --metrics-enabled=true
 
 FROM quay.io/keycloak/keycloak:26.4.7
 
@@ -73,6 +76,10 @@ spec:
 
 <Directive type="warning" title="Build Phase Is Mandatory">
 In Keycloak 26.x (Quarkus), providers that register new SPIs, authentication mechanisms, or protocol mappers **must** be present during the `kc.sh build` step. Skipping the build phase will result in providers not being discovered or loaded. The custom image approach is the **only** supported method for production deployments.
+</Directive>
+
+<Directive type="warning" title="Build-Time Options in Custom Images">
+When using a pre-built custom image, build-time options such as `--health-enabled` and `--metrics-enabled` must be included in the `kc.sh build` command inside the Dockerfile. These options, if specified via `additionalOptions` in the Keycloak CR, are **ignored** when a custom image is used because the Operator does not re-run the build step. Always include all necessary build-time flags in your Dockerfile.
 </Directive>
 
 <Directive type="warning" title="unsupported.podTemplate Is Not a Stable API">
