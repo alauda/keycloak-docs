@@ -146,8 +146,14 @@ Modifying the Infinispan cache configuration is an advanced operation. Incorrect
 
 ### Cluster Discovery
 
-In Kubernetes, Keycloak uses the KUBE_PING or DNS_PING JGroups protocol for cluster discovery. The Operator configures this automatically. Ensure that:
+In Kubernetes, the Keycloak Operator automatically configures the cluster discovery mechanism for Infinispan. The specific discovery protocol used is an internal implementation detail managed by the Operator and may change between versions.
 
-- Keycloak Pods can communicate on the JGroups port (default: `7800`).
-- Network policies do not block inter-Pod traffic on this port.
-- The Keycloak service account has permission to list Pods in the namespace (required for KUBE_PING).
+To ensure cluster formation works correctly:
+
+- Keycloak Pods must be able to communicate with each other on the cluster communication port (default: `7800`).
+- Network policies must allow inter-Pod traffic on this port within the Keycloak namespace.
+- The Keycloak service account may require permissions to discover peer Pods, depending on the discovery mechanism used by the Operator.
+
+<Directive type="info" title="Cluster Formation is Operator-Managed">
+You do not need to manually configure JGroups or Infinispan discovery. The Operator handles this based on the `spec.instances` count and the cluster environment. If Pods are not forming a cluster, verify network connectivity between Pods on port `7800` and check the Operator logs for discovery errors.
+</Directive>

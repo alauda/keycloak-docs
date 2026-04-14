@@ -100,17 +100,27 @@ For confidential clients, Keycloak generates a client secret automatically.
 3. The current client secret is displayed. Click **Regenerate** to create a new secret.
 
 <Directive type="warning" title="Secret Regeneration">
-Regenerating a client secret immediately invalidates the previous secret. All applications using the old secret must be updated before they can authenticate.
+Clicking **Regenerate** without a rotation policy in place immediately invalidates the previous secret. All applications using the old secret must be updated before they can authenticate.
 </Directive>
 
 ### Client Secret Rotation
 
-Keycloak supports client secret rotation to allow zero-downtime secret updates:
+Client secret rotation is a separate, policy-controlled mechanism that allows zero-downtime secret updates. When rotation is configured, Keycloak maintains multiple active secrets simultaneously during a transition period.
 
-1. In the **Credentials** tab, click **Regenerate** to create a new secret.
-2. The previous secret remains valid during the rotation period.
-3. Update your application to use the new secret.
-4. The old secret expires after the configured rotation period.
+<Directive type="info" title="Rotation vs Regeneration">
+Client secret rotation is **not** the same as clicking **Regenerate**. Rotation is governed by a client policy that controls the rotation period and the number of active secrets. Without a rotation policy, regenerating a secret is an immediate, disruptive replacement. Configure a rotation policy via **Client Policies** before relying on zero-downtime secret updates.
+</Directive>
+
+To use client secret rotation:
+
+1. Create a client policy with a **Secret Rotation** executor (see [Client Policies](#client-policies) below).
+2. Configure the rotation parameters:
+   - **Secret expiration period** — How long a secret remains valid after creation.
+   - **Rotated secret expiration period** — How long the previous (rotated-out) secret remains valid alongside the new one.
+   - **Remaining expiration period** — Minimum remaining validity to trigger rotation.
+3. Apply the policy to the target clients.
+4. When the policy triggers rotation, Keycloak generates a new secret while keeping the previous secret valid for the configured grace period.
+5. Update your application to use the new secret within the grace period.
 
 ## Protocol Mappers
 

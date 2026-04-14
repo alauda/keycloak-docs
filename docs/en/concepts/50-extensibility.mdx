@@ -35,9 +35,15 @@ The full SPI development guide is maintained in the upstream Keycloak documentat
 
 ## Deploying Extensions in Kubernetes
 
-Keycloak 26.x (Quarkus-based) has a different extension deployment model than legacy Keycloak/RH-SSO (WildFly-based). Extensions must be available at **build time** so the Quarkus optimized runtime can include them.
+Keycloak 26.x (Quarkus-based) has a fundamentally different extension deployment model than legacy Keycloak/RH-SSO (WildFly-based). In the Quarkus model, the server goes through a **build phase** (`kc.sh build`) that performs ahead-of-time compilation and optimization. Most SPIs and providers must be present during this build phase to be registered with the Quarkus runtime.
 
-### Recommended: Custom Image Build
+This means:
+
+- Provider JARs placed in `/opt/keycloak/providers/` **before** the build phase are compiled into the optimized runtime.
+- Provider JARs added **after** the build phase (for example, via volume mount at Pod startup) are generally **not** recognized by the Quarkus runtime, with limited exceptions for certain SPI types.
+- There is no universal hot-deployment mechanism — unlike WildFly-based Keycloak, you cannot simply drop a JAR into a running server.
+
+### Required: Custom Image Build
 
 Build a custom Keycloak image with your extensions included:
 
@@ -65,37 +71,12 @@ spec:
   image: my-registry.example.com/keycloak-custom:26.4.7
 ```
 
-<Directive type="warning" title="Build vs Runtime Providers">
-In Keycloak 26.x (Quarkus), most providers must be present during the `kc.sh build` step. Simply mounting a JAR at runtime via a volume may not work for all provider types. Always use the custom image approach for production deployments.
+<Directive type="warning" title="Build Phase Is Mandatory">
+In Keycloak 26.x (Quarkus), providers that register new SPIs, authentication mechanisms, or protocol mappers **must** be present during the `kc.sh build` step. Skipping the build phase will result in providers not being discovered or loaded. The custom image approach is the **only** supported method for production deployments.
 </Directive>
 
-### Alternative: Init Container
-
-For development or testing, you can use an init container to copy provider JARs into the Keycloak providers directory:
-
-```yaml
-spec:
-  unsupported:
-    podTemplate:
-      spec:
-        initContainers:
-          - name: copy-providers
-            image: my-registry.example.com/keycloak-providers:latest
-            command: ["cp", "-r", "/providers/.", "/target/"]
-            volumeMounts:
-              - name: providers
-                mountPath: /target
-        containers:
-          - volumeMounts:
-              - name: providers
-                mountPath: /opt/keycloak/providers
-        volumes:
-          - name: providers
-            emptyDir: {}
-```
-
-<Directive type="warning" title="Limitation">
-The init container approach does not run `kc.sh build`, so it only works for providers that support runtime deployment (hot deployment). For full compatibility, use the custom image approach.
+<Directive type="warning" title="unsupported.podTemplate Is Not a Stable API">
+Some guides suggest using init containers with `unsupported.podTemplate` to mount provider JARs at runtime. This approach uses an unstable API field, does not run the Quarkus build phase, and is not guaranteed to work for most provider types. Do not use this approach for production deployments.
 </Directive>
 
 ## Versioning and Compatibility

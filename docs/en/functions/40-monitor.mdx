@@ -84,13 +84,30 @@ The probes use the management endpoint at `http://<pod>:9000/health/live` and `h
 
 ## Health Endpoints
 
-Keycloak exposes three health endpoints on the management port:
+Keycloak exposes health endpoints on the management port for monitoring and orchestration:
 
 | Endpoint | Description |
 |:---------|:------------|
-| `/health/live` | Returns `UP` if the Keycloak process is running |
-| `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized) |
-| `/health/started` | Returns `UP` after Keycloak has fully started |
+| `/health` | Aggregated health check — returns `UP` only when all sub-checks (liveness, readiness) are healthy. Use as a single entry point for dashboards and external health monitors. |
+| `/health/live` | Returns `UP` if the Keycloak process is running. Used by Kubernetes liveness probes. |
+| `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized). Used by Kubernetes readiness probes. |
+| `/health/started` | Returns `UP` after Keycloak has completed startup. Used by Kubernetes startup probes. |
+
+### Observability Integration
+
+For a complete observability stack, combine Keycloak's built-in capabilities with cluster-level tooling:
+
+| Signal | Source | Tool |
+|:-------|:-------|:-----|
+| **Metrics** | `/metrics` endpoint (Prometheus format) | Prometheus, Thanos |
+| **Health** | `/health/*` endpoints | Kubernetes probes, uptime monitors |
+| **Logs** | Container stdout/stderr (JSON or plain text) | Loki, Fluentd, ELK |
+| **Events** | Keycloak event system (database + listeners) | See Event Auditing below |
+| **Tracing** | OpenTelemetry (if enabled) | Tempo, Jaeger |
+
+<Directive type="info" title="Distributed Tracing">
+Keycloak 26.x supports OpenTelemetry-based distributed tracing. Enabling tracing and configuring the OTLP exporter endpoint are done via `additionalOptions` in the Keycloak CR. Tracing configuration details depend on your specific observability backend and are beyond the scope of this guide. Refer to the upstream Keycloak Observability documentation for setup instructions.
+</Directive>
 
 ## Event Auditing
 

@@ -95,43 +95,9 @@ loginTitleHtml=Welcome to <strong>My Company</strong>
 
 ## Deploy Themes in Kubernetes
 
-In a Kubernetes Operator-managed deployment, custom themes must be made available to the Keycloak Pods. There are two approaches.
+In a Kubernetes Operator-managed deployment, custom themes must be made available to the Keycloak Pods. The recommended approach is to build a custom container image. A ConfigMap-based alternative exists for development and testing only.
 
-### Option A: ConfigMap (Recommended for Small Themes)
-
-1. Package the theme directory into a ConfigMap:
-
-```bash
-kubectl create configmap keycloak-custom-theme \
-  --from-file=my-custom-theme/ \
-  -n <namespace>
-```
-
-2. Mount the ConfigMap into the Keycloak Pod via the `Keycloak` CR:
-
-```yaml
-spec:
-  unsupported:
-    podTemplate:
-      spec:
-        containers:
-          - volumeMounts:
-              - name: custom-theme
-                mountPath: /opt/keycloak/themes/my-custom-theme
-        volumes:
-          - name: custom-theme
-            configMap:
-              name: keycloak-custom-theme
-```
-
-3. Apply the updated CR and wait for Pods to restart.
-4. In the Admin Console, go to **Realm Settings** > **Themes** and select `my-custom-theme`.
-
-<Directive type="info" title="ConfigMap Size Limit">
-ConfigMaps have a 1 MiB size limit. For themes with large images or many files, use the custom image approach instead.
-</Directive>
-
-### Option B: Custom Keycloak Image (Recommended for Production)
+### Option A: Custom Keycloak Image (Recommended for Production)
 
 Build a custom container image with the theme pre-installed:
 
@@ -161,6 +127,48 @@ spec:
 
 <Directive type="warning" title="Image Maintenance">
 When using a custom image, you must rebuild and redeploy the image whenever Keycloak is upgraded to a new version. Ensure your CI/CD pipeline includes this step.
+</Directive>
+
+### Option B: ConfigMap (Development and Testing Only)
+
+For quick iteration during development, you can mount a theme via ConfigMap and the `unsupported.podTemplate` field:
+
+1. Package the theme directory into a ConfigMap:
+
+```bash
+kubectl create configmap keycloak-custom-theme \
+  --from-file=my-custom-theme/ \
+  -n <namespace>
+```
+
+2. Mount the ConfigMap into the Keycloak Pod via the `Keycloak` CR:
+
+```yaml
+spec:
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - volumeMounts:
+              - name: custom-theme
+                mountPath: /opt/keycloak/themes/my-custom-theme
+        volumes:
+          - name: custom-theme
+            configMap:
+              name: keycloak-custom-theme
+```
+
+3. Apply the updated CR and wait for Pods to restart.
+4. In the Admin Console, go to **Realm Settings** > **Themes** and select `my-custom-theme`.
+
+<Directive type="warning" title="Not Recommended for Production">
+This approach uses the `unsupported.podTemplate` field, which is not part of the stable Keycloak Operator API. It may change or be removed in future versions without notice. Additionally:
+
+- ConfigMaps have a 1 MiB size limit, which may not accommodate themes with images.
+- The `unsupported` field is not covered by standard support and upgrade compatibility guarantees.
+- Rolling updates may temporarily cause Pods with mismatched theme versions.
+
+For production deployments, always use the custom image approach (Option A).
 </Directive>
 
 ## Customize Email Templates

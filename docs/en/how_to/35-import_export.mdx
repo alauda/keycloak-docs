@@ -72,9 +72,9 @@ curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
 
 ## Import Methods
 
-### Import via KeycloakRealmImport CRD (Recommended)
+### Import via KeycloakRealmImport CRD (Recommended for Initial Setup)
 
-The declarative CRD-based approach is the preferred method for Kubernetes deployments. See [Manage Realms](../functions/20-manage_realms.mdx) for details.
+The `KeycloakRealmImport` CRD is the preferred method for initial Realm provisioning in Kubernetes deployments. See [Manage Realms](../functions/20-manage_realms.mdx) for details.
 
 ```yaml
 apiVersion: k8s.keycloak.org/v2alpha1
@@ -86,6 +86,18 @@ spec:
   realm:
     # Full realm JSON embedded here
 ```
+
+<Directive type="warning" title="KeycloakRealmImport Is a One-Shot Import">
+The `KeycloakRealmImport` CRD performs a **one-time import** when the resource is created. It is not a continuous synchronization controller — subsequent changes made via the Admin Console or REST API are **not** reflected back to the CR, and updating the CR does not automatically re-apply changes to an existing Realm.
+
+Specifically:
+- It creates or merges Realm configuration at import time.
+- It does not track or reconcile ongoing Realm state.
+- Modifying the CR after the initial import does not trigger a re-import automatically.
+- It should not be relied upon as a full lifecycle management or GitOps sync mechanism.
+
+For ongoing Realm configuration changes after initial import, use the Admin Console or Admin REST API.
+</Directive>
 
 ### Import via CLI (Startup Import)
 
