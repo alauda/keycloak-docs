@@ -139,28 +139,28 @@ For quick iteration during development, you can mount a theme via ConfigMap and 
 
 1. Package the theme directory into a ConfigMap:
 
-```bash
-kubectl create configmap keycloak-custom-theme \
-  --from-file=my-custom-theme/ \
-  -n <namespace>
-```
+   ```bash
+   kubectl create configmap keycloak-custom-theme \
+     --from-file=my-custom-theme/ \
+     -n <namespace>
+   ```
 
 2. Mount the ConfigMap into the Keycloak Pod via the `Keycloak` CR:
 
-```yaml
-spec:
-  unsupported:
-    podTemplate:
-      spec:
-        containers:
-          - volumeMounts:
-              - name: custom-theme
-                mountPath: /opt/keycloak/themes/my-custom-theme
-        volumes:
-          - name: custom-theme
-            configMap:
-              name: keycloak-custom-theme
-```
+   ```yaml
+   spec:
+     unsupported:
+       podTemplate:
+         spec:
+           containers:
+             - volumeMounts:
+                 - name: custom-theme
+                   mountPath: /opt/keycloak/themes/my-custom-theme
+           volumes:
+             - name: custom-theme
+               configMap:
+                 name: keycloak-custom-theme
+   ```
 
 3. Apply the updated CR and wait for Pods to restart.
 4. In the Admin Console, go to **Realm Settings** > **Themes** and select `my-custom-theme`.

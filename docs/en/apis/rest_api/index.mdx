@@ -40,13 +40,13 @@ Use a confidential client with service account roles:
 3. Assign the appropriate admin roles to the service account (for example, `realm-admin`).
 4. Obtain a token using the `client_credentials` grant:
 
-```bash
-ACCESS_TOKEN=$(curl -s -X POST \
-  "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
-  -d "client_id=<service-client-id>" \
-  -d "client_secret=<service-client-secret>" \
-  -d "grant_type=client_credentials" | jq -r '.access_token')
-```
+   ```bash
+   ACCESS_TOKEN=$(curl -s -X POST \
+     "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+     -d "client_id=<service-client-id>" \
+     -d "client_secret=<service-client-secret>" \
+     -d "grant_type=client_credentials" | jq -r '.access_token')
+   ```
 
 Service accounts are recommended for automation and CI/CD pipelines.
 

@@ -2,6 +2,8 @@
 weight: 10
 ---
 
+{/* cspell:ignore ROPC */}
+
 # Secure Applications with OpenID Connect
 
 This guide describes how to integrate a client application with Keycloak using the OpenID Connect (OIDC) protocol. Keycloak acts as the Identity Provider (IdP) and issues tokens that your application validates.
@@ -106,9 +108,9 @@ For backend APIs that receive bearer tokens from other applications:
 1. Register a client in Keycloak (bearer-only or confidential).
 2. Configure your API to validate access tokens using the Keycloak JWKS endpoint:
 
-```
-https://<keycloak-host>/realms/<realm>/protocol/openid-connect/certs
-```
+   ```
+   https://<keycloak-host>/realms/<realm>/protocol/openid-connect/certs
+   ```
 
 3. On each request, extract the `Authorization: Bearer <token>` header.
 4. Validate the token signature using the JWKS keys.
