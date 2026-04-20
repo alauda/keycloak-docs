@@ -33,10 +33,14 @@ The following categories of metrics are available:
 | **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live_threads` | Java Virtual Machine memory, GC, and thread usage |
 | **HTTP** | `http_server_requests_seconds_count`, `http_server_requests_seconds_sum`, `http_server_active_requests` | Request count, cumulative latency, and active connections. Use `_count` and `_sum` to calculate average request latency. |
 | **Database** | `agroal_active_connections`, `agroal_awaiting_connections`, `agroal_max_used_connections` | Database connection pool usage, contention, and peak utilization |
-| **Keycloak Login Events** | `keycloak_logins_total`, `keycloak_login_errors_total`, `keycloak_failed_login_attempts_total` | Authentication success and failure counts per Realm. Use `login_errors_total` to monitor brute force or credential issues. |
-| **Keycloak Registration** | `keycloak_registrations_total`, `keycloak_registrations_errors_total` | User self-registration events per Realm |
-| **Keycloak Client Login** | `keycloak_client_login_total`, `keycloak_client_login_errors_total` | Service account (client credentials) authentication events |
+| **Keycloak Login Events** | `keycloak_user_events_total{event="login"}`, `keycloak_user_events_total{event="login_error"}` | Authentication success and failure counts per Realm (requires `--event-metrics-user-enabled=true`). Use the `login_error` event label to monitor brute force or credential issues. |
+| **Keycloak Registration** | `keycloak_user_events_total{event="register"}`, `keycloak_user_events_total{event="register_error"}` | User self-registration events per Realm |
+| **Keycloak Client Login** | `keycloak_user_events_total{event="client_login"}`, `keycloak_user_events_total{event="client_login_error"}` | Service account (client credentials) authentication events |
 | **Infinispan / Cache** | `vendor_cache_manager_*`, `vendor_statistics_*` | Distributed cache hit/miss ratios and cluster state (when cache statistics are enabled) |
+
+<Directive type="info" title="Native Keycloak 26.x Event Metrics">
+Keycloak 26.x exposes user event metrics natively via the single metric `keycloak_user_events_total` with an `event` label (for example, `event="login"`, `event="register"`). Enable it by adding `--event-metrics-user-enabled=true` to your build or runtime options. Third-party SPI extensions such as `aerogear/keycloak-metrics-spi` are **not** required and use a different naming convention.
+</Directive>
 
 ### Recommended Alerting Indicators
 
@@ -44,7 +48,7 @@ The following metrics are recommended as starting points for alerting rules:
 
 | Indicator | Metric / Query | Alert Condition |
 |:----------|:---------------|:----------------|
-| **Login failure rate** | `rate(keycloak_login_errors_total[5m])` | Spike above baseline indicates brute force or configuration issues |
+| **Login failure rate** | `rate(keycloak_user_events_total{event="login_error"}[5m])` | Spike above baseline indicates brute force or configuration issues |
 | **HTTP error rate** | `rate(http_server_requests_seconds_count{status=~"5.."}[5m])` | 5xx errors above threshold indicate server problems |
 | **Database pool exhaustion** | `agroal_awaiting_connections > 0` | Requests waiting for DB connections indicate pool sizing issues |
 | **JVM memory pressure** | `jvm_memory_used_bytes / jvm_memory_max_bytes > 0.9` | High heap utilization may indicate memory leak or undersizing |

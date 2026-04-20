@@ -37,6 +37,10 @@ A **Client** in Keycloak represents an application or service that can request a
     12. Click **Save**.
   </Tab>
   <Tab label="CLI">
+    <Directive type="warning" title="Password Grant Is Deprecated">
+    The `grant_type=password` (Resource Owner Password Credentials) flow used below is deprecated in Keycloak 26.x and should only be used in development or scripting scenarios. For production automation, obtain tokens using a service account with `grant_type=client_credentials` instead (see [Method 2 in the Admin REST API guide](../apis/rest_api/)).
+    </Directive>
+
     ```bash
     # Obtain an admin access token
     ACCESS_TOKEN=$(curl -s -X POST \

@@ -105,7 +105,7 @@ curl -s -X POST \
 
 For backend APIs that receive bearer tokens from other applications:
 
-1. Register a client in Keycloak (bearer-only or confidential).
+1. Register a **confidential client** in Keycloak with all standard authentication flows disabled (uncheck **Standard flow**, **Direct access grants**, etc.). This is the recommended approach for resource servers in Keycloak 17+, as the deprecated bearer-only client type is no longer exposed in the Admin Console UI.
 2. Configure your API to validate access tokens using the Keycloak JWKS endpoint:
 
    ```
