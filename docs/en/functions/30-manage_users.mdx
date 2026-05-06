@@ -119,3 +119,67 @@ To create a composite role:
 1. Create a Realm role.
 2. In the role's detail view, enable **Composite role**.
 3. In the **Associated roles** tab, add the child roles.
+
+## Admin Access Control
+
+Keycloak provides fine-grained control over who can administer realms and what operations they can perform.
+
+### Master Realm vs Realm-Specific Admins
+
+| Admin Type | Scope | How to Assign |
+|:-----------|:------|:--------------|
+| **Super Admin** | Full access to all realms. Defined in the `master` realm. | Assign the `admin` role in the `master` realm. |
+| **Realm Admin** | Full access to a specific realm only. | Assign the `realm-admin` client role from the `realm-management` client in the target realm. |
+| **Custom Admin** | Limited access to specific operations in a realm. | Assign individual admin roles from the `realm-management` client. |
+
+### Fine-Grained Admin Roles
+
+The `realm-management` client in each realm provides granular admin roles. Roles follow a `view-*` / `manage-*` pattern — `view-*` grants read-only access, `manage-*` grants full CRUD access and implicitly includes the corresponding `view-*` permission.
+
+| Role | Permissions |
+|:-----|:------------|
+| `view-users` | View users and their attributes |
+| `manage-users` | Create, update, and delete users |
+| `query-users` | Minimal user search (list and count only, without full attribute access) |
+| `view-clients` | View client configurations |
+| `manage-clients` | Create, update, and delete clients |
+| `query-clients` | Minimal client search (list clients without full configuration access) |
+| `view-realm` | View realm settings |
+| `manage-realm` | Modify realm settings |
+| `view-events` | View login and admin events |
+| `manage-events` | Configure event settings |
+| `query-realms` | Minimal realm listing (used for navigation in the Admin Console) |
+| `query-groups` | Minimal group search |
+| `view-identity-providers` | View identity provider configurations |
+| `manage-identity-providers` | Create, update, and delete identity providers |
+| `view-authorization` | View authorization settings |
+| `manage-authorization` | Manage authorization policies and permissions |
+| `impersonation` | Impersonate users |
+| `create-client` | Create new clients (without full `manage-clients` scope) |
+
+<Directive type="info" title="Query vs View Roles">
+The `query-*` roles provide minimal list/search access needed for Admin Console navigation without granting full read access to resource details. When creating delegated admin accounts, assign `query-*` roles alongside specific `manage-*` or `view-*` roles so the admin can navigate the console properly.
+</Directive>
+
+### Permission Boundaries
+
+Fine-grained admin permissions have the following boundaries:
+
+- Delegated admins **cannot** grant roles they do not have themselves. A user with `manage-users` but without `manage-clients` cannot assign client roles.
+- Delegated admins **cannot** access other realms unless they also have roles in those realms.
+- The `realm-admin` composite role includes all individual admin roles. Assign it only when full realm administration is intended.
+
+### Create a Delegated Admin
+
+To create an admin user who can only manage users in a specific realm:
+
+1. Create a user in the target realm.
+2. Go to the user's **Role mapping** tab.
+3. Click **Assign role** > **Filter by clients**.
+4. Search for `realm-management`.
+5. Assign `view-users`, `manage-users`, `query-users`, and `query-realms` roles.
+6. The user can now access the Admin Console at `https://<keycloak-host>/admin/<realm>/console` with limited permissions.
+
+<Directive type="info" title="Dedicated Admin Console">
+Each realm has a dedicated Admin Console URL: `https://<keycloak-host>/admin/<realm>/console`. Delegated admins should use this URL instead of the global admin console.
+</Directive>

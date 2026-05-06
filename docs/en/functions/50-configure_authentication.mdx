@@ -1,0 +1,205 @@
+---
+weight: 50
+---
+
+# Configure Authentication
+
+Keycloak provides a flexible authentication framework that supports password policies, multi-factor authentication (MFA), custom authentication flows, and advanced methods such as WebAuthn and X.509 certificates.
+
+## Password Policies
+
+Password policies enforce credential complexity and lifecycle rules for users within a Realm.
+
+### Configure Password Policies
+
+1. In the Admin Console, go to **Authentication** > **Policies** > **Password policy** tab.
+2. Click **Add policy** and select a policy type from the dropdown.
+3. Configure the policy parameter and click **Save**.
+
+### Available Password Policies
+
+| Policy | Description | Example Value |
+|:-------|:------------|:--------------|
+| **Minimum Length** | Minimum number of characters required | `8` |
+| **Uppercase Characters** | Minimum number of uppercase letters | `1` |
+| **Lowercase Characters** | Minimum number of lowercase letters | `1` |
+| **Digits** | Minimum number of numeric characters | `1` |
+| **Special Characters** | Minimum number of special characters | `1` |
+| **Not Username** | Password cannot be the same as the username | — |
+| **Not Email** | Password cannot be the same as the email | — |
+| **Password History** | Number of previous passwords that cannot be reused | `3` |
+| **Expire Password** | Number of days before the password must be changed | `90` |
+| **Hashing Algorithm** | The algorithm used to hash stored passwords | `pbkdf2-sha512` |
+| **Hashing Iterations** | Number of hashing iterations (higher = more secure but slower) | `210000` |
+| **Maximum Length** | Maximum number of characters allowed | `128` |
+| **Regular Expression** | A custom regex pattern the password must match | `.*[^a-zA-Z0-9].*` |
+| **Not Recently Used** | Number of recently used passwords that cannot be reused | `3` |
+
+<Directive type="info" title="Password Policy Enforcement">
+Password policies are enforced when users set or change their password. Existing users are not retroactively affected unless you add the **Update Password** required action to enforce a password reset on next login.
+</Directive>
+
+## OTP Policies
+
+One-Time Password (OTP) provides a second authentication factor. Keycloak supports both TOTP (time-based) and HOTP (counter-based) algorithms.
+
+### Configure OTP Policy
+
+1. Go to **Authentication** > **Policies** > **OTP policy** tab.
+2. Configure the following settings:
+
+| Setting | Description | Default |
+|:--------|:------------|:--------|
+| **OTP Type** | `totp` (time-based) or `hotp` (counter-based) | `totp` |
+| **OTP Hash Algorithm** | Hash algorithm: `SHA1`, `SHA256`, `SHA512` | `SHA1` |
+| **Number of Digits** | Length of the OTP code (`6` or `8`) | `6` |
+| **Look Ahead Window** | Number of intervals to check for clock drift (TOTP) or counter desync (HOTP) | `1` |
+| **OTP Token Period** | Time interval in seconds for TOTP code rotation | `30` |
+| **Supported Applications** | Comma-separated list of authenticator apps shown to users | `FreeOTP`, `Google Authenticator` |
+
+3. Click **Save**.
+
+### Require OTP for All Users
+
+To enforce OTP as a required action for all users:
+
+1. Go to **Authentication** > **Required actions**.
+2. Find **Configure OTP** and enable the **Set as default action** toggle.
+3. All users will be prompted to set up OTP on their next login.
+
+## Authentication Flows
+
+**Authentication Flows** define the sequence of steps a user must complete to authenticate. Keycloak includes built-in flows and supports creating custom flows.
+
+### Built-in Flows
+
+| Flow | Description |
+|:-----|:------------|
+| **Browser** | Standard browser login (username/password, OTP if configured) |
+| **Direct Grant** | Resource Owner Password Credentials grant (API-based login) |
+| **Registration** | User self-registration flow |
+| **Reset Credentials** | Password reset flow |
+| **First Broker Login** | Flow executed when a user authenticates via an external IdP for the first time |
+| **Client Authentication** | Authenticates clients using credentials (secret, JWT, etc.) |
+
+### Create a Custom Authentication Flow
+
+1. Go to **Authentication** > **Flows** tab.
+2. Click the menu icon on an existing flow and select **Duplicate**.
+3. Enter a name for the custom flow (for example, `Custom Browser Flow`).
+4. Modify the flow by adding, removing, or reordering authentication steps:
+   - Click **Add step** to insert an authenticator.
+   - Set each step's **Requirement** to one of:
+     - `Required` — must succeed.
+     - `Alternative` — one of the alternative steps must succeed.
+     - `Conditional` — evaluated only if the condition is met.
+     - `Disabled` — skipped.
+5. Click **Save**.
+
+### Bind a Custom Flow
+
+After creating a custom flow, bind it to a Realm:
+
+1. Go to **Authentication** > **Flows** tab.
+2. Select your custom flow.
+3. Click **Action** > **Bind flow**.
+4. Select the binding type (for example, **Browser flow**).
+5. Click **Save**.
+
+## WebAuthn / Passwordless Authentication
+
+Keycloak supports the WebAuthn standard for hardware security keys, platform authenticators (fingerprint, Face ID), and fully passwordless login.
+
+### Enable WebAuthn as a Second Factor
+
+1. Go to **Authentication** > **Flows** tab.
+2. Duplicate the **Browser** flow.
+3. In the duplicated flow, add a **WebAuthn Authenticator** step after the username/password step.
+4. Set the WebAuthn step requirement to `Required` or `Alternative`.
+5. Bind the custom flow as the Browser flow.
+
+### Enable Passwordless Login
+
+1. Duplicate the **Browser** flow.
+2. Add a **WebAuthn Passwordless Authenticator** step.
+3. Set the username form to `Alternative` and the WebAuthn Passwordless step to `Alternative`.
+4. Bind the custom flow as the Browser flow.
+5. Go to **Authentication** > **Required actions** and enable **Webauthn Register Passwordless**.
+
+### Configure WebAuthn Policy
+
+1. Go to **Authentication** > **Policies** > **WebAuthn policy** tab (or **WebAuthn Passwordless policy** tab).
+2. Configure:
+
+| Setting | Description |
+|:--------|:------------|
+| **Relying Party Entity Name** | Display name for the relying party |
+| **Signature Algorithms** | Allowed signing algorithms (for example, `ES256`, `RS256`) |
+| **Relying Party ID** | The domain for credential scoping (for example, `keycloak.example.com`) |
+| **Attestation Conveyance Preference** | Whether to request attestation from the authenticator |
+| **Authenticator Attachment** | `platform` (built-in biometric), `cross-platform` (USB key), or unspecified |
+| **Require Resident Key** | Whether to require a discoverable credential (needed for passwordless) |
+| **User Verification Requirement** | `required`, `preferred`, or `discouraged` |
+
+3. Click **Save**.
+
+## X.509 Client Certificate Authentication
+
+Keycloak can authenticate users based on X.509 client certificates presented during TLS handshake.
+
+<Directive type="warning" title="Infrastructure Prerequisite">
+X.509 authentication requires the TLS termination point (Keycloak Pod or reverse proxy) to be configured to request and pass client certificates. This typically requires configuring mutual TLS (mTLS) at the Ingress controller or load balancer level. The specific configuration depends on your infrastructure setup.
+</Directive>
+
+### Enable X.509 Authentication
+
+1. Duplicate the **Browser** flow.
+2. Add an **X.509/Validate Username Form** step.
+3. Configure the X.509 authenticator:
+
+| Setting | Description |
+|:--------|:------------|
+| **User Identity Source** | Which certificate field to use for user lookup (for example, `SubjectDN`, `SubjectEmail`, `SubjectCN`) |
+| **User Mapping Method** | How to match the identity to a Keycloak user (for example, `Username or Email`) |
+| **A Regular Expression** | Optional regex to extract a portion of the certificate field |
+| **CRL Checking** | Enable Certificate Revocation List checking |
+| **OCSP Checking** | Enable Online Certificate Status Protocol checking |
+
+4. Bind the custom flow as the Browser flow.
+
+## Kerberos / SPNEGO Authentication
+
+Keycloak supports Kerberos-based single sign-on via the SPNEGO protocol, allowing users with valid Kerberos tickets to authenticate transparently.
+
+<Directive type="info" title="Environment Requirement">
+Kerberos authentication requires a functioning Kerberos infrastructure (KDC) and proper DNS/SPN configuration. The Keycloak server must be registered as a service principal in the Kerberos realm. Configuration details depend on your Kerberos environment and are beyond the scope of this guide. Refer to the upstream Keycloak documentation for detailed Kerberos setup instructions.
+</Directive>
+
+### Enable Kerberos Authentication
+
+1. Configure a User Federation provider (LDAP) with Kerberos integration enabled, or configure a standalone Kerberos provider.
+2. Provide the Kerberos Realm name, Server Principal, and KeyTab file location.
+3. Keycloak will attempt SPNEGO negotiation during browser login.
+
+## Step-Up Authentication
+
+**Step-Up Authentication** allows you to require additional authentication factors for sensitive operations, using the **Authentication Context Class Reference (ACR)** mechanism.
+
+### Configure ACR-to-LoA Mapping
+
+1. Go to **Authentication** > **Flows** tab.
+2. In your browser flow, add **Conditional** sub-flows with conditions based on the requested Level of Assurance (LoA).
+3. Go to **Realm Settings** > **General** > **ACR to LoA Mapping**.
+4. Map ACR values to numeric LoA levels (for example, `acr-loa-1` = Level 1, `acr-loa-2` = Level 2).
+
+Applications can then request specific LoA levels by including the `acr_values` parameter in the authorization request, and Keycloak will enforce the corresponding authentication steps.
+
+## User Session Limits
+
+To limit the number of concurrent sessions per user:
+
+1. Duplicate the **Browser** flow.
+2. Add a **User session count limiter** step.
+3. Configure the maximum number of sessions per user.
+4. Set the behavior when the limit is reached: deny the new login or terminate the oldest session.
+5. Bind the custom flow as the Browser flow.

@@ -1,0 +1,157 @@
+---
+weight: 60
+---
+
+# Configure Authorization
+
+This guide walks through configuring Keycloak Authorization Services to protect resources with fine-grained policies. For background concepts, see [Authorization Services](../concepts/40-authorization_services.mdx).
+
+## Prerequisites
+
+- A Keycloak Realm with a confidential OIDC client (see [Manage Clients](../functions/25-manage_clients.mdx)).
+- Authorization enabled on the client (client **Settings** > **Authorization** toggle).
+
+## Step 1: Define Resources
+
+Resources represent the entities your application protects.
+
+1. In the client's **Authorization** tab, click **Resources**.
+2. Click **Create resource**.
+3. Configure:
+
+| Field | Description | Example |
+|:------|:------------|:--------|
+| **Name** | Descriptive name for the resource | `Document` |
+| **Display Name** | User-facing name (used in UMA consent screens) | `Document` |
+| **Type** | A category label for the resource | `urn:my-app:resources:document` |
+| **URIs** | The URI patterns this resource represents | `/api/documents/*` |
+| **Scopes** | Actions allowed on this resource | `view`, `edit`, `delete` |
+
+4. Click **Save**.
+
+## Step 2: Define Scopes
+
+If you need scopes beyond those created inline with resources:
+
+1. Click **Authorization scopes**.
+2. Click **Create authorization scope**.
+3. Enter a **Name** (for example, `approve`).
+4. Click **Save**.
+
+## Step 3: Create Policies
+
+Policies define the conditions under which access is granted.
+
+### Create a Role-Based Policy
+
+1. Click **Policies** > **Create policy** > **Role**.
+2. Enter a **Name** (for example, `Managers Only`).
+3. Add the required realm or client roles (for example, `manager`).
+4. Set **Logic** to `Positive` (grant when the condition is met) or `Negative` (deny when met).
+5. Click **Save**.
+
+### Create a Group-Based Policy
+
+1. Click **Create policy** > **Group**.
+2. Enter a **Name**.
+3. Select the groups that should have access.
+4. Enable **Extend to Children** to include sub-groups.
+5. Click **Save**.
+
+### Create a Time-Based Policy
+
+1. Click **Create policy** > **Time**.
+2. Configure the time window:
+   - **Not Before** / **Not On or After** — Date range.
+   - **Day of Month** / **Month** / **Year** — Calendar constraints.
+   - **Hour** / **Minute** — Time of day constraints.
+3. Click **Save**.
+
+### Create a User-Based Policy
+
+1. Click **Create policy** > **User**.
+2. Select specific users who should have access.
+3. Click **Save**.
+
+### Create an Aggregated Policy
+
+An aggregated policy combines multiple sub-policies with a decision strategy.
+
+1. Click **Create policy** > **Aggregated**.
+2. Enter a **Name**.
+3. Set **Decision Strategy** to `Unanimous`, `Affirmative`, or `Consensus`.
+4. Add the sub-policies.
+5. Click **Save**.
+
+## Step 4: Create Permissions
+
+Permissions bind resources and scopes to policies.
+
+### Create a Resource-Based Permission
+
+1. Click **Permissions** > **Create resource-based permission**.
+2. Enter a **Name** (for example, `Document Access`).
+3. Select the **Resources** this permission applies to.
+4. Select the **Policies** to evaluate.
+5. Set the **Decision Strategy** for combining policy results.
+6. Click **Save**.
+
+### Create a Scope-Based Permission
+
+1. Click **Create scope-based permission**.
+2. Enter a **Name** (for example, `Document Edit Permission`).
+3. Select the **Resources** (optional — applies to all resources if omitted).
+4. Select the **Scopes** (for example, `edit`).
+5. Select the **Policies**.
+6. Click **Save**.
+
+## Step 5: Test Policies
+
+Use the built-in policy evaluation tool to test your authorization configuration before deploying.
+
+1. Click the **Evaluate** tab in the Authorization section.
+2. Select or create a test user.
+3. Select the client scope context.
+4. Add resource and scope permissions to evaluate.
+5. Click **Evaluate**.
+6. Review the results:
+   - **PERMIT** — Access is granted.
+   - **DENY** — Access is denied.
+   - Expand each result to see which policies contributed to the decision.
+
+## Obtaining Authorization from Your Application
+
+### Request a Requesting Party Token (RPT)
+
+```bash
+# Exchange an access token for an RPT with specific resource permissions
+curl -s -X POST \
+  "https://<keycloak-host>/realms/<realm>/protocol/openid-connect/token" \
+  -H "Authorization: Bearer <access-token>" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:uma-ticket" \
+  -d "audience=<client-id>" \
+  -d "permission=<resource-id>#<scope>"
+```
+
+The response contains an RPT (access token with embedded permissions).
+
+### Introspect an RPT
+
+```bash
+curl -s -X POST \
+  "https://<keycloak-host>/realms/<realm>/protocol/openid-connect/token/introspect" \
+  -d "token=<rpt>" \
+  -d "client_id=<client-id>" \
+  -d "client_secret=<client-secret>" \
+  -d "token_type_hint=requesting_party_token"
+```
+
+The response includes a `permissions` array listing granted resources and scopes.
+
+## Export and Import
+
+Authorization configurations (resources, scopes, policies, permissions) can be exported as JSON for version control or migration:
+
+1. In the **Authorization** tab, click **Export settings**.
+2. The JSON includes all resources, scopes, policies, and permissions.
+3. To import, use the **Import** button or include the authorization configuration in the client definition within a `KeycloakRealmImport` CR.

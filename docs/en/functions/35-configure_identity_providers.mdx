@@ -1,0 +1,188 @@
+---
+weight: 35
+---
+
+# Configure Identity Providers
+
+Keycloak can broker authentication to external Identity Providers (IdPs), allowing users to log in with their existing accounts from OIDC, SAML, or social identity providers.
+
+For foundational concepts on identity federation, see [Identity Federation](../concepts/30-identity_federation.mdx).
+
+## Add an OpenID Connect Identity Provider
+
+Use this procedure to integrate any OIDC-compliant identity provider (for example, Microsoft Entra ID, Okta, or another Keycloak instance).
+
+<Tabs>
+  <Tab label="Web Console">
+    1. In the Admin Console, select the target Realm.
+    2. Go to **Identity providers** in the left navigation.
+    3. Click **Add provider** and select **OpenID Connect v1.0**.
+    4. Configure the following:
+
+    | Field | Description |
+    |:------|:------------|
+    | **Alias** | A unique identifier for this IdP (for example, `corporate-idp`). Used in redirect URLs. |
+    | **Display Name** | Shown on the login page button (for example, `Corporate SSO`) |
+    | **Discovery Endpoint** | The OIDC discovery URL (for example, `https://idp.example.com/.well-known/openid-configuration`). If provided, most fields are auto-populated. |
+    | **Authorization URL** | The IdP's authorization endpoint (auto-filled from discovery) |
+    | **Token URL** | The IdP's token endpoint (auto-filled from discovery) |
+    | **Client ID** | The client ID registered at the external IdP for this Keycloak instance |
+    | **Client Secret** | The client secret registered at the external IdP |
+    | **Client Authentication** | Method used to authenticate with the IdP: `Client secret sent as post`, `Client secret sent as basic auth`, or `JWT signed with client secret` |
+
+    5. Click **Save**.
+  </Tab>
+  <Tab label="CLI">
+    ```bash
+    ACCESS_TOKEN=$(curl -s -X POST \
+      "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli" \
+      -d "username=<admin-user>" \
+      -d "password=<admin-password>" \
+      -d "grant_type=password" | jq -r '.access_token')
+
+    curl -s -X POST \
+      "https://<keycloak-host>/admin/realms/<realm>/identity-provider/instances" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "alias": "corporate-idp",
+        "displayName": "Corporate SSO",
+        "providerId": "oidc",
+        "enabled": true,
+        "config": {
+          "authorizationUrl": "https://idp.example.com/authorize",
+          "tokenUrl": "https://idp.example.com/token",
+          "clientId": "<client-id>",
+          "clientSecret": "<client-secret>",
+          "defaultScope": "openid email profile"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Add a SAML Identity Provider
+
+<Tabs>
+  <Tab label="Web Console">
+    1. Go to **Identity providers** > **Add provider** > **SAML v2.0**.
+    2. Configure the following:
+
+    | Field | Description |
+    |:------|:------------|
+    | **Alias** | Unique identifier for this IdP (for example, `adfs-idp`) |
+    | **Display Name** | Shown on the login page |
+    | **Service Provider Entity ID** | The entity ID that Keycloak uses as SP (defaults to the Keycloak Realm URL) |
+    | **Single Sign-On Service URL** | The IdP's SSO endpoint URL |
+    | **Single Logout Service URL** | The IdP's logout endpoint (optional) |
+    | **NameID Policy Format** | The name ID format to request (for example, `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`) |
+    | **Want AuthnRequests Signed** | Whether to sign SAML authentication requests |
+    | **Want Assertions Signed** | Whether to require the IdP to sign assertions |
+    | **Validating X509 Certificates** | The IdP's signing certificate (PEM format) |
+
+    3. Click **Save**.
+  </Tab>
+</Tabs>
+
+After creating the SAML IdP, download the Keycloak SP metadata to register with the external IdP:
+
+```
+https://<keycloak-host>/realms/<realm>/broker/<alias>/endpoint/descriptor
+```
+
+## Add a Social Identity Provider
+
+Keycloak provides built-in templates for popular social identity providers. The configuration is similar for each; only the provider-specific client registration differs.
+
+### Supported Social Providers
+
+| Provider | Provider ID | Registration URL |
+|:---------|:------------|:-----------------|
+| **GitHub** | `github` | https://github.com/settings/developers |
+| **Google** | `google` | https://console.cloud.google.com/apis/credentials |
+| **Microsoft** | `microsoft` | https://entra.microsoft.com/ |
+| **GitLab** | `gitlab` | Self-hosted GitLab: Admin > Applications |
+| **Facebook** | `facebook` | https://developers.facebook.com/apps |
+
+### Example: Add GitHub as an Identity Provider
+
+1. Register a new OAuth App at GitHub:
+   - **Homepage URL**: `https://<keycloak-host>/realms/<realm>`
+   - **Authorization callback URL**: `https://<keycloak-host>/realms/<realm>/broker/github/endpoint`
+   - Note the **Client ID** and **Client Secret**.
+
+2. In the Keycloak Admin Console:
+   - Go to **Identity providers** > **Add provider** > **GitHub**.
+   - Enter the **Client ID** and **Client Secret** from the GitHub OAuth App.
+   - Click **Save**.
+
+3. The GitHub login button appears on the Realm login page.
+
+## IdP Mappers
+
+**IdP Mappers** control how user attributes and roles from the external IdP are mapped to Keycloak users.
+
+### Add an IdP Mapper
+
+1. In the IdP detail view, click the **Mappers** tab.
+2. Click **Add mapper**.
+3. Select a mapper type:
+
+| Mapper Type | Description |
+|:------------|:------------|
+| **Attribute Importer** | Maps an IdP claim/attribute to a Keycloak user attribute |
+| **Hardcoded Role** | Assigns a fixed role to all users from this IdP |
+| **Hardcoded Group** | Adds all users from this IdP to a fixed group |
+| **Hardcoded Attribute** | Sets a fixed user attribute for all users from this IdP |
+| **Username Template Importer** | Constructs the Keycloak username from IdP claims using a template |
+| **Advanced Claim to Role** | Maps IdP claim values to Keycloak roles using conditions |
+| **SAML Attribute to Role** | Maps a SAML attribute value to a Keycloak role |
+
+4. Configure the source (IdP claim or attribute) and target (Keycloak attribute or role).
+5. Click **Save**.
+
+## First Login Flow
+
+When a user authenticates via an external IdP for the first time, Keycloak executes a **First Login Flow** to determine how to handle the new identity.
+
+### Default First Login Flow Behavior
+
+1. **Review Profile** — The user is prompted to review and complete their profile.
+2. **Create User** — If no existing user matches, a new user is created.
+3. **Link Existing Account** — If a user with the same email already exists, the user is prompted to link accounts.
+
+### Customize the First Login Flow
+
+1. Go to **Authentication** > **Flows** tab.
+2. Duplicate the **First broker login** flow.
+3. Modify the steps as needed:
+   - Remove **Review Profile** to skip the profile review step.
+   - Add conditions to automatically link accounts without user confirmation.
+4. In the IdP configuration, set **First login flow** to your custom flow.
+
+## Default Identity Provider
+
+You can configure a **default IdP** so that the Keycloak login page automatically redirects to the external IdP without showing the local login form.
+
+1. Go to **Authentication** > **Flows** > **Browser** flow.
+2. Add an **Identity Provider Redirector** step.
+3. Configure the **Default Identity Provider** in the step configuration.
+4. Set the step requirement to `Alternative`.
+
+Alternatively, applications can suggest an IdP by passing the `kc_idp_hint` query parameter in the authorization request:
+
+```
+https://<keycloak-host>/realms/<realm>/protocol/openid-connect/auth?
+  client_id=my-app&
+  redirect_uri=https://my-app.example.com/callback&
+  response_type=code&
+  kc_idp_hint=github
+```
+
+## Broker Logout
+
+By default, when a user logs out of Keycloak, the session with the external IdP is not terminated. To enable cascading logout:
+
+1. In the IdP configuration, enable **Backchannel logout** or **Front-channel logout** (depending on IdP support).
+2. Ensure the external IdP is configured to accept logout requests from Keycloak.

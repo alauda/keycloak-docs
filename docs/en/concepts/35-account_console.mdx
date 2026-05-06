@@ -1,0 +1,71 @@
+---
+weight: 35
+---
+
+# Account Console
+
+The **Account Console** is a self-service web interface that allows end users to manage their own account without administrator assistance.
+
+## Accessing the Account Console
+
+Users access the Account Console at:
+
+```
+https://<keycloak-host>/realms/<realm>/account
+```
+
+The user must be authenticated to access the console. If not already logged in, the user is redirected to the Realm login page.
+
+## Available Self-Service Features
+
+| Feature | Description |
+|:--------|:------------|
+| **Personal Info** | View and update profile attributes (name, email, locale) |
+| **Account Security** | Change password, configure MFA (OTP, WebAuthn), view sign-in history |
+| **Device Activity** | View and manage active sessions across devices. Sign out from specific devices. |
+| **Linked Accounts** | View and manage linked identity provider accounts (for example, Google, GitHub) |
+| **Applications** | View authorized applications and revoke consent |
+
+## Account Security
+
+### Change Password
+
+1. Go to **Account Security** > **Signing in** > **Basic authentication**.
+2. Click **Update**.
+3. Enter the current password and new password.
+4. Click **Submit**.
+
+### Set Up OTP
+
+1. Go to **Account Security** > **Signing in** > **Two-factor authentication**.
+2. Click **Set up Authenticator application**.
+3. Scan the QR code with an authenticator app (for example, FreeOTP, Google Authenticator).
+4. Enter the verification code from the app.
+5. Click **Submit**.
+
+### Register a WebAuthn Security Key
+
+If WebAuthn is enabled in the Realm:
+
+1. Go to **Account Security** > **Signing in** > **Passwordless** or **Two-factor authentication**.
+2. Click **Set up Security Key**.
+3. Follow the browser prompts to register a hardware key or platform authenticator.
+
+## Device Activity
+
+1. Go to **Account Security** > **Device activity**.
+2. View all active sessions with IP addresses, browsers, and last access times.
+3. Click **Sign out** on a specific session to terminate it remotely.
+
+## Administrator Controls
+
+Administrators can control which self-service features are available:
+
+- **User Profile** attributes can be marked as read-only for users (see [Security Hardening](../how_to/40-security_hardening.mdx)).
+- **Required Actions** can mandate actions on next login (for example, Update Password, Configure OTP, Verify Email).
+- **Self-registration** can be enabled or disabled in **Realm Settings** > **Login** tab.
+- **Account deletion** can be enabled by adding the **Delete Account** required action.
+
+## Customizing the Account Console
+
+The Account Console appearance is controlled by the `account` theme. See [Customize Themes](../how_to/50-customize_themes.mdx) for instructions on creating custom themes.

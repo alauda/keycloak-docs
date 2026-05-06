@@ -1,0 +1,228 @@
+---
+weight: 25
+---
+
+# Manage Clients
+
+A **Client** in Keycloak represents an application or service that can request authentication. Each client is registered within a Realm and configured with a specific protocol (OpenID Connect or SAML).
+
+## Client Types
+
+| Type | Description | Use Case |
+|:-----|:------------|:---------|
+| **Public Client** | Cannot securely store a client secret. Uses Authorization Code flow with PKCE. | Single-page applications (SPAs), mobile apps |
+| **Confidential Client** | Has a client secret used for server-side authentication. | Backend web applications, microservices |
+| **Bearer-only** | Only validates bearer tokens. Does not initiate login flows. | REST APIs that receive tokens from other clients |
+
+## Create an OIDC Client
+
+<Tabs>
+  <Tab label="Web Console">
+    1. Log in to the Keycloak Admin Console and select the target Realm.
+    2. Click **Clients** in the left navigation bar.
+    3. Click **Create client**.
+    4. Set **Client type** to `OpenID Connect`.
+    5. Enter a **Client ID** (for example, `my-web-app`).
+    6. Click **Next**.
+    7. Configure client authentication:
+       - Enable **Client authentication** for confidential clients.
+       - Disable it for public clients.
+    8. Select the appropriate **Authentication flow** checkboxes:
+       - **Standard flow** (Authorization Code) — recommended for most applications.
+       - **Direct access grants** — for trusted applications that handle user credentials directly.
+       - **Service accounts roles** — for machine-to-machine authentication.
+    9. Click **Next**.
+    10. Set **Valid redirect URIs** (for example, `https://my-app.example.com/*`).
+    11. Set **Web origins** for CORS (for example, `https://my-app.example.com`).
+    12. Click **Save**.
+  </Tab>
+  <Tab label="CLI">
+    <Directive type="warning" title="Password Grant Is Deprecated">
+    The `grant_type=password` (Resource Owner Password Credentials) flow used below is deprecated in Keycloak 26.x and should only be used in development or scripting scenarios. For production automation, obtain tokens using a service account with `grant_type=client_credentials` instead (see [Method 2 in the Admin REST API guide](../apis/rest_api/)).
+    </Directive>
+
+    ```bash
+    # Obtain an admin access token
+    ACCESS_TOKEN=$(curl -s -X POST \
+      "https://<keycloak-host>/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli" \
+      -d "username=<admin-user>" \
+      -d "password=<admin-password>" \
+      -d "grant_type=password" | jq -r '.access_token')
+
+    # Create a confidential OIDC client
+    curl -s -X POST \
+      "https://<keycloak-host>/admin/realms/<realm>/clients" \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "clientId": "my-web-app",
+        "enabled": true,
+        "protocol": "openid-connect",
+        "publicClient": false,
+        "redirectUris": ["https://my-app.example.com/*"],
+        "webOrigins": ["https://my-app.example.com"],
+        "standardFlowEnabled": true,
+        "directAccessGrantsEnabled": false,
+        "serviceAccountsEnabled": false
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Create a SAML Client
+
+<Tabs>
+  <Tab label="Web Console">
+    1. In the Admin Console, click **Clients** > **Create client**.
+    2. Set **Client type** to `SAML`.
+    3. Enter the **Client ID** — this must match the Service Provider (SP) Entity ID (for example, `https://my-app.example.com/saml/metadata`).
+    4. Click **Save**.
+    5. Configure the following in the client **Settings** tab:
+
+    | Setting | Description |
+    |:--------|:------------|
+    | **Root URL** | The base URL of your application |
+    | **Valid post logout redirect URIs** | URLs allowed after SAML logout |
+    | **Master SAML Processing URL** | The SP Assertion Consumer Service (ACS) URL |
+    | **Name ID Format** | The subject name format (for example, `email`, `persistent`, `transient`) |
+    | **Sign Assertions** | Enable to sign individual SAML assertions |
+    | **Sign Documents** | Enable to sign the entire SAML response |
+
+    6. In the **Keys** tab, configure encryption keys if your SP requires encrypted assertions.
+  </Tab>
+</Tabs>
+
+## Client Secret Management
+
+For confidential clients, Keycloak generates a client secret automatically.
+
+### View or Regenerate a Client Secret
+
+1. In the Admin Console, go to **Clients** and select the target client.
+2. Click the **Credentials** tab.
+3. The current client secret is displayed. Click **Regenerate** to create a new secret.
+
+<Directive type="warning" title="Secret Regeneration">
+Clicking **Regenerate** without a rotation policy in place immediately invalidates the previous secret. All applications using the old secret must be updated before they can authenticate.
+</Directive>
+
+### Client Secret Rotation
+
+Client secret rotation is a separate, policy-controlled mechanism that allows zero-downtime secret updates. When rotation is configured, Keycloak maintains multiple active secrets simultaneously during a transition period.
+
+<Directive type="info" title="Rotation vs Regeneration">
+Client secret rotation is **not** the same as clicking **Regenerate**. Rotation is governed by a client policy that controls the rotation period and the number of active secrets. Without a rotation policy, regenerating a secret is an immediate, disruptive replacement. Configure a rotation policy via **Client Policies** before relying on zero-downtime secret updates.
+</Directive>
+
+To use client secret rotation:
+
+1. Create a client policy with a **Secret Rotation** executor (see [Client Policies](#client-policies) below).
+2. Configure the rotation parameters:
+   - **Secret expiration period** — How long a secret remains valid after creation.
+   - **Rotated secret expiration period** — How long the previous (rotated-out) secret remains valid alongside the new one.
+   - **Remaining expiration period** — Minimum remaining validity to trigger rotation.
+3. Apply the policy to the target clients.
+4. When the policy triggers rotation, Keycloak generates a new secret while keeping the previous secret valid for the configured grace period.
+5. Update your application to use the new secret within the grace period.
+
+## Protocol Mappers
+
+**Protocol Mappers** control what claims are included in the tokens (OIDC) or assertions (SAML) issued for a client.
+
+### Add a Protocol Mapper
+
+1. In the client's detail view, click the **Client scopes** tab.
+2. Click the dedicated scope (for example, `my-web-app-dedicated`).
+3. Click **Configure a new mapper** or **Add mapper** > **By configuration**.
+4. Select the mapper type:
+
+| Mapper Type | Description |
+|:------------|:------------|
+| **User Attribute** | Maps a user attribute to a token claim |
+| **User Realm Role** | Includes the user's realm roles in the token |
+| **User Client Role** | Includes the user's client roles in the token |
+| **Group Membership** | Includes the user's group memberships in the token |
+| **Audience** | Adds an audience claim to the token |
+| **Hardcoded Claim** | Adds a static value as a claim |
+
+5. Configure the mapper name, token claim name, and claim type.
+6. Click **Save**.
+
+## Client Scopes
+
+**Client Scopes** define reusable sets of protocol mappers and role scope mappings that can be shared across multiple clients.
+
+### Default vs Optional Scopes
+
+| Scope Type | Behavior |
+|:-----------|:---------|
+| **Default** | Always included in the token when the client requests authentication |
+| **Optional** | Only included when explicitly requested via the `scope` parameter in the authorization request |
+
+### Create a Client Scope
+
+1. In the Admin Console, go to **Client scopes**.
+2. Click **Create client scope**.
+3. Enter a **Name** (for example, `custom-profile`).
+4. Set **Protocol** to `OpenID Connect` or `SAML`.
+5. Set **Include in token scope** to `On` if the scope name should appear in the token's `scope` claim.
+6. Click **Save**.
+7. Add protocol mappers to define what claims this scope provides.
+
+### Assign a Client Scope to a Client
+
+1. In the client's detail view, click the **Client scopes** tab.
+2. Click **Add client scope**.
+3. Select the scope and set it as **Default** or **Optional**.
+4. Click **Add**.
+
+### Evaluate Scopes
+
+The **Evaluate** sub-tab in the client scopes view lets you preview the exact token content for a given user and scope combination, which is useful for debugging token claim issues.
+
+## Service Accounts
+
+A **Service Account** allows a confidential client to authenticate and obtain tokens without a user context (using the `client_credentials` grant).
+
+### Enable a Service Account
+
+1. In the client **Settings** tab, enable **Service accounts roles**.
+2. Click **Save**.
+3. Go to the **Service account roles** tab.
+4. Assign realm or client roles to define what the service account can access.
+
+### Obtain a Token with Service Account
+
+```bash
+curl -s -X POST \
+  "https://<keycloak-host>/realms/<realm>/protocol/openid-connect/token" \
+  -d "client_id=my-service" \
+  -d "client_secret=<client-secret>" \
+  -d "grant_type=client_credentials" | jq .
+```
+
+<a id="client-policies"></a>
+
+## Client Policies
+
+**Client Policies** allow administrators to enforce rules on client configurations. A policy consists of **conditions** (when the policy applies) and **profiles** (what rules to enforce).
+
+### Built-in Profiles
+
+Keycloak includes profiles for common compliance standards:
+
+| Profile | Description |
+|:--------|:------------|
+| **FAPI 1 Baseline** | Enforces Financial-grade API Part 1 security requirements |
+| **FAPI 1 Advanced** | Enforces Financial-grade API Part 2 security requirements |
+| **FAPI CIBA** | Enforces FAPI Client Initiated Backchannel Authentication requirements |
+
+### Create a Client Policy
+
+1. Go to **Realm Settings** > **Client policies** tab.
+2. Click **Create policy**.
+3. Enter a name and description.
+4. Add conditions to define which clients the policy applies to (for example, by client role, client scope, or client access type).
+5. Add profiles to define the rules enforced on matching clients.
+6. Click **Save**.

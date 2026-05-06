@@ -1,0 +1,104 @@
+---
+weight: 25
+---
+
+# Configure Database
+
+Keycloak requires a relational database for persistent storage of realms, users, clients, sessions, and events. This guide covers database configuration for production deployments.
+
+## Supported Databases
+
+Alauda Build of Keycloak is tested and supported with the following database:
+
+| Database | Vendor Value | Status |
+|:---------|:-------------|:-------|
+| **PostgreSQL** | `postgres` | **Recommended and fully supported.** |
+
+Upstream Keycloak 26.x also supports MySQL/MariaDB, Microsoft SQL Server, and Oracle at the engine level. However, Alauda Build of Keycloak is validated and supported with PostgreSQL only. Using other database vendors is at your own risk and may not receive support.
+
+<Directive type="warning" title="Database Support Boundary">
+The supported PostgreSQL version range for Alauda Build of Keycloak is defined in the release notes for each version. Do not assume that all PostgreSQL versions supported by upstream Keycloak are also validated for Alauda Build. Always check the release notes and compatibility matrix before deploying or upgrading your database.
+</Directive>
+
+## Configure the Database in the Keycloak CR
+
+The database connection is configured in the `spec.db` section of the `Keycloak` CR:
+
+```yaml
+spec:
+  db:
+    vendor: postgres
+    host: postgres-db.database.svc.cluster.local
+    port: 5432
+    database: keycloak
+    schema: public
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+```
+
+### Configuration Reference
+
+| Field | Description | Default |
+|:------|:------------|:--------|
+| `spec.db.vendor` | Database type | `postgres` |
+| `spec.db.host` | Database hostname | — |
+| `spec.db.port` | Database port | `5432` (PostgreSQL) |
+| `spec.db.database` | Database name | `keycloak` |
+| `spec.db.schema` | Database schema | `public` |
+| `spec.db.url` | Full JDBC URL (overrides host/port/database) | — |
+| `spec.db.usernameSecret` | Secret reference for database username | — |
+| `spec.db.passwordSecret` | Secret reference for database password | — |
+| `spec.db.poolInitialSize` | Initial connection pool size | `0` |
+| `spec.db.poolMinSize` | Minimum connection pool size | `0` |
+| `spec.db.poolMaxSize` | Maximum connection pool size | `100` |
+
+## Create the Database Secret
+
+```bash
+kubectl create secret generic keycloak-db-secret \
+  --from-literal=username=keycloak \
+  --from-literal=password='<strong-password>' \
+  -n <namespace>
+```
+
+## Production Best Practices
+
+### Connection Pool Sizing
+
+The default maximum pool size of `100` is suitable for most deployments. Adjust based on:
+
+- Number of Keycloak replicas (each replica maintains its own pool)
+- Expected concurrent user load
+- Database server connection limits
+
+For a 3-replica HA deployment, the total maximum connections = `poolMaxSize * replicas` (for example, `100 * 3 = 300`).
+
+### Database High Availability
+
+For production deployments, the database should be highly available:
+
+- Use a managed database service with automatic failover, or
+- Deploy a PostgreSQL HA cluster (for example, using a PostgreSQL Operator such as CloudNativePG or Zalando Postgres Operator).
+- Configure connection strings to point to the primary/writer endpoint.
+
+### Backup and Restore
+
+<Directive type="warning" title="Backup Strategy Required">
+Keycloak stores all configuration, user data, and credentials in the database. A robust backup strategy is essential. The specific backup procedures depend on your database infrastructure and are outside the scope of this guide. Ensure that your database backup solution:
+- Performs regular automated backups (at least daily)
+- Supports point-in-time recovery
+- Is tested regularly with restore drills
+- Stores backups in a separate location from the database
+</Directive>
+
+### Database Schema Migration
+
+Keycloak automatically applies database schema migrations on startup when upgrading to a new version. No manual migration steps are required. However:
+
+- Always back up the database before upgrading Keycloak.
+- Schema migrations are forward-only and cannot be rolled back.
+- Test upgrades in a non-production environment first.

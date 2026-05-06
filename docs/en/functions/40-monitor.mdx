@@ -30,10 +30,29 @@ The following categories of metrics are available:
 
 | Category | Example Metrics | Description |
 |:---------|:----------------|:------------|
-| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds` | Java Virtual Machine resource usage |
-| **HTTP** | `http_server_requests_seconds`, `http_server_active_requests` | Request count, latency, and active connections |
-| **Database** | `agroal_active_connections`, `agroal_awaiting_connections` | Database connection pool usage |
-| **Keycloak Events** | `keycloak_logins_total`, `keycloak_login_errors_total` | Authentication success and failure counts per Realm |
+| **JVM** | `jvm_memory_used_bytes`, `jvm_gc_pause_seconds`, `jvm_threads_live_threads` | Java Virtual Machine memory, GC, and thread usage |
+| **HTTP** | `http_server_requests_seconds_count`, `http_server_requests_seconds_sum`, `http_server_active_requests` | Request count, cumulative latency, and active connections. Use `_count` and `_sum` to calculate average request latency. |
+| **Database** | `agroal_active_connections`, `agroal_awaiting_connections`, `agroal_max_used_connections` | Database connection pool usage, contention, and peak utilization |
+| **Keycloak Login Events** | `keycloak_user_events_total{event="login"}`, `keycloak_user_events_total{event="login_error"}` | Authentication success and failure counts per Realm (requires `--event-metrics-user-enabled=true`). Use the `login_error` event label to monitor brute force or credential issues. |
+| **Keycloak Registration** | `keycloak_user_events_total{event="register"}`, `keycloak_user_events_total{event="register_error"}` | User self-registration events per Realm |
+| **Keycloak Client Login** | `keycloak_user_events_total{event="client_login"}`, `keycloak_user_events_total{event="client_login_error"}` | Service account (client credentials) authentication events |
+| **Infinispan / Cache** | `vendor_cache_manager_*`, `vendor_statistics_*` | Distributed cache hit/miss ratios and cluster state (when cache statistics are enabled) |
+
+<Directive type="info" title="Native Keycloak 26.x Event Metrics">
+Keycloak 26.x exposes user event metrics natively via the single metric `keycloak_user_events_total` with an `event` label (for example, `event="login"`, `event="register"`). Enable it by adding `--event-metrics-user-enabled=true` to your build or runtime options. Third-party SPI extensions such as `aerogear/keycloak-metrics-spi` are **not** required and use a different naming convention.
+</Directive>
+
+### Recommended Alerting Indicators
+
+The following metrics are recommended as starting points for alerting rules:
+
+| Indicator | Metric / Query | Alert Condition |
+|:----------|:---------------|:----------------|
+| **Login failure rate** | `rate(keycloak_user_events_total{event="login_error"}[5m])` | Spike above baseline indicates brute force or configuration issues |
+| **HTTP error rate** | `rate(http_server_requests_seconds_count{status=~"5.."}[5m])` | 5xx errors above threshold indicate server problems |
+| **Database pool exhaustion** | `agroal_awaiting_connections > 0` | Requests waiting for DB connections indicate pool sizing issues |
+| **JVM memory pressure** | `jvm_memory_used_bytes / jvm_memory_max_bytes > 0.9` | High heap utilization may indicate memory leak or undersizing |
+| **Health probe failure** | Kubernetes probe failure events | Liveness or readiness probe failures indicate instance instability |
 
 ## Configure Prometheus Scraping
 
@@ -84,10 +103,115 @@ The probes use the management endpoint at `http://<pod>:9000/health/live` and `h
 
 ## Health Endpoints
 
-Keycloak exposes three health endpoints on the management port:
+Keycloak exposes health endpoints on the management port for monitoring and orchestration:
 
 | Endpoint | Description |
 |:---------|:------------|
-| `/health/live` | Returns `UP` if the Keycloak process is running |
-| `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized) |
-| `/health/started` | Returns `UP` after Keycloak has fully started |
+| `/health` | Aggregated health check — returns `UP` only when all sub-checks (liveness, readiness) are healthy. Use as a single entry point for dashboards and external health monitors. |
+| `/health/live` | Returns `UP` if the Keycloak process is running. Used by Kubernetes liveness probes. |
+| `/health/ready` | Returns `UP` if Keycloak is ready to serve requests (database connected, caches initialized). Used by Kubernetes readiness probes. |
+| `/health/started` | Returns `UP` after Keycloak has completed startup. Used by Kubernetes startup probes. |
+
+### Observability Integration
+
+For a complete observability stack, combine Keycloak's built-in capabilities with cluster-level tooling:
+
+| Signal | Source | Tool |
+|:-------|:-------|:-----|
+| **Metrics** | `/metrics` endpoint (Prometheus format) | Prometheus, Thanos |
+| **Health** | `/health/*` endpoints | Kubernetes probes, uptime monitors |
+| **Logs** | Container stdout/stderr (JSON or plain text) | Loki, Fluentd, ELK |
+| **Events** | Keycloak event system (database + listeners) | See Event Auditing below |
+| **Tracing** | OpenTelemetry (if enabled) | Tempo, Jaeger |
+
+<Directive type="info" title="Distributed Tracing">
+Keycloak 26.x supports OpenTelemetry-based distributed tracing. The Keycloak Operator provides first-class tracing configuration fields in the `Keycloak` CR:
+
+```yaml
+spec:
+  tracing:
+    enabled: true
+    endpoint: "http://tempo.observability:4317"
+    samplerType: traceidratio
+    samplerRatio: 0.1
+```
+
+Available `spec.tracing` fields:
+
+| Field | Description | Default |
+|:------|:------------|:--------|
+| `enabled` | Enable OpenTelemetry tracing | `false` |
+| `endpoint` | OTLP collector endpoint URL | — |
+| `protocol` | Telemetry protocol (`grpc` or `http/protobuf`) | `grpc` |
+| `samplerType` | Sampler type (`traceidratio`, `always_on`, `always_off`) | `traceidratio` |
+| `samplerRatio` | Sampling probability (0.0 to 1.0) | — |
+| `compression` | Payload compression (`gzip` or `none`) | disabled |
+| `serviceName` | Service name in exported traces | — |
+| `resourceAttributes` | Additional key-value attributes for trace resources | — |
+
+Use `spec.tracing` for all standard tracing configuration. Only use `additionalOptions` for tracing-related options not covered by the first-class fields above.
+</Directive>
+
+## Event Auditing
+
+Keycloak provides a built-in event system that records login events and admin operations. Events can be stored in the database and forwarded to external listeners.
+
+### Enable Login Events
+
+1. In the Admin Console, go to **Realm Settings** > **Events** tab.
+2. In the **User events settings** section:
+   - Enable **Save events**.
+   - Set **Expiration** to control how long events are retained (for example, `30` days).
+   - Select the **Event types** to record (or leave blank to record all types).
+3. Click **Save**.
+
+### Key Login Event Types
+
+| Event Type | Description |
+|:-----------|:------------|
+| `LOGIN` | Successful user login |
+| `LOGIN_ERROR` | Failed login attempt |
+| `LOGOUT` | User logout |
+| `REGISTER` | New user registration |
+| `CODE_TO_TOKEN` | Authorization code exchanged for tokens |
+| `CODE_TO_TOKEN_ERROR` | Failed token exchange |
+| `REFRESH_TOKEN` | Token refresh |
+| `CLIENT_LOGIN` | Client (service account) authentication |
+| `IMPERSONATE` | Admin impersonated a user |
+
+### Enable Admin Events
+
+1. In the **Admin events settings** section:
+   - Enable **Save events**.
+   - Enable **Include representation** to record the full request body of admin operations (useful for audit trails, but increases storage usage).
+2. Click **Save**.
+
+Admin events record all operations performed via the Admin Console or Admin REST API, including resource type, operation type (CREATE, UPDATE, DELETE), and the admin user who performed the action.
+
+### View Events
+
+- **Login events**: Go to **Events** > **User events** tab. Filter by event type, user, date range, or client.
+- **Admin events**: Go to **Events** > **Admin events** tab. Filter by operation type, resource type, or admin user.
+
+### Event Listeners
+
+Event listeners process events as they occur. Keycloak includes two built-in listeners:
+
+| Listener | Description |
+|:---------|:------------|
+| **jboss-logging** | Writes events to the Keycloak server log. Useful for log aggregation systems (ELK, Loki). |
+| **email** | Sends email notifications to the user when specific events occur (for example, login from a new device). |
+
+Configure listeners in **Realm Settings** > **Events** > **Event listeners**.
+
+### Query Events via REST API
+
+```bash
+# Get recent login events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/events?type=LOGIN_ERROR&first=0&max=50"
+
+# Get admin events
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "https://<keycloak-host>/admin/realms/<realm>/admin-events?first=0&max=50"
+```

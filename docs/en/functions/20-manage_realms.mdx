@@ -8,7 +8,11 @@ A Realm is the primary isolation unit in Keycloak. Each Realm has independent us
 
 ## Import a Realm via CRD
 
-The `KeycloakRealmImport` CRD enables GitOps-friendly, declarative Realm management. When you create a `KeycloakRealmImport` resource, the Operator triggers an import Job that loads the Realm configuration into the target Keycloak instance.
+The `KeycloakRealmImport` CRD enables declarative Realm provisioning. When you create a `KeycloakRealmImport` resource, the Operator triggers a one-time import Job that loads the Realm configuration into the target Keycloak instance.
+
+<Directive type="info" title="One-Time Import">
+The `KeycloakRealmImport` performs a one-time import at creation, not continuous synchronization. Changes made via the Admin Console after import are not reflected back to the CR. For ongoing Realm configuration changes, use the Admin Console or Admin REST API.
+</Directive>
 
 ### Procedure
 
