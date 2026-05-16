@@ -1,0 +1,30 @@
+# llms.txt Generator Configuration for alauda/keycloak-docs
+# Repo kind: pure-docs
+
+project_name: "Keycloak Docs"
+summary: "Documentation for the Alauda Keycloak (Alauda Container Security) product, an enterprise IAM platform based on Keycloak."
+
+include_patterns:
+  - "**/*.md"
+  - "**/*.mdx"
+
+exclude_patterns:
+  - "**/node_modules/**"
+  - "**/.git/**"
+  - "**/llms.txt"
+  - "**/CHANGELOG.md"
+  - "**/CONTRIBUTING.md"
+  - "**/.llmstxt-cache/**"
+  - "**/.yarn/**"
+  - "**/.builds/**"
+  - "**/.github/**"
+  - "**/.tekton/**"
+
+# Start H2 grouping from this relative path. Does not limit scan depth.
+grouping_base_path: "."
+
+# Files per batch for AI processing
+batch_size: 15
+
+# Maximum words per generated file description
+description_max_words: 150
