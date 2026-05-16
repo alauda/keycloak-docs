@@ -1,0 +1,325 @@
+{
+  "version": 1,
+  "generator_version": 3,
+  "project_name": "Keycloak Docs",
+  "summary": "Documentation for the Alauda Keycloak (Alauda Container Security) product, an enterprise IAM platform based on Keycloak.",
+  "generated_at": "2026-05-16T06:24:40Z",
+  "include_patterns": [
+    "**/*.md",
+    "**/*.mdx"
+  ],
+  "exclude_patterns": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/llms.txt",
+    "**/CHANGELOG.md",
+    "**/CONTRIBUTING.md",
+    "**/.llmstxt-cache/**",
+    "**/.yarn/**",
+    "**/.builds/**",
+    "**/.github/**",
+    "**/.tekton/**",
+    ".llmstxt-cache/**",
+    "llms.txt",
+    "llmstxt-state.json",
+    "**/llmstxt-state.json"
+  ],
+  "grouping_base_path": ".",
+  "description_max_words": 150,
+  "files": {
+    "README.md": {
+      "sha256": "f0c8d80339ee2a735d64288297156ad36ace501ae73f23d9f501e08b024195e5",
+      "size": 809,
+      "description": "Contributor quick-start for the docs site itself, covering Node.js/npm prerequisites and Yarn-based workflows. Lists the `yarn install`, `yarn dev` (live reload), `yarn build` (produces `dist/`), and `yarn serve` (preview) commands, and recommends VS Code with the MDX extension for authoring.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/apis/index.mdx": {
+      "sha256": "a0b9f6449e5d86af9ef621c1934499df63f22fc4456f717ae93cc6d5e6ca2865",
+      "size": 72,
+      "description": "Landing page for the Alauda Build of Keycloak API Reference section (weight 110), acting as the parent index that renders an Overview component linking to the Kubernetes APIs and Admin REST API subsections.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/apis/kubernetes_apis/index.mdx": {
+      "sha256": "ae560d45e95367fef0ff8e47c8e3a9a20e6b37df7f7eaa85af24e873bd42e657",
+      "size": 73,
+      "description": "Index page for the Kubernetes APIs subsection of the reference, which catalogs the Operator-managed Custom Resource Definitions (`Keycloak` and `KeycloakRealmImport`) provided under the `k8s.keycloak.org/v2alpha1` group via an Overview component.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/apis/kubernetes_apis/keycloak.mdx": {
+      "sha256": "c3039df6ce9509823b5d405dedcad1b982242b09d3f5e2f56285260d5b4a1cbb",
+      "size": 9329,
+      "description": "Full reference for the `Keycloak` Custom Resource (`k8s.keycloak.org/v2alpha1`, short name `kc`) that the Operator reconciles into Deployments, Services, Ingress, and Secrets. Documents every `spec` field including `instances`, `db` (postgres/mysql/mariadb/mssql/oracle vendors with `SecretKeySelector` credentials and pool sizing), `http`/`ingress`/`hostname`/`proxy`, `resources`, `additionalOptions`, `bootstrapAdmin`, `cache` (Infinispan ConfigMap), `features` flags, `scheduling`, `networkPolicy`, probes, `image`, `imagePullSecrets`, and `env`, plus the `Ready`, `HasErrors`, and `RollingUpdate` status conditions.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/apis/kubernetes_apis/keycloak_realm_import.mdx": {
+      "sha256": "e948e246b8a53243cfb05f5a26261803b3ea6a02126da6864257a39aad8c3dcc",
+      "size": 8571,
+      "description": "Reference for the `KeycloakRealmImport` CR that enables GitOps-style declarative realm provisioning by triggering an import Job against a target `Keycloak` CR. Covers `spec.keycloakCRName`, Secret-backed `placeholders` with `$(NAME)` substitution, and the full `RealmRepresentation` body — core realm settings, token lifespans, brute-force protection, clients (OIDC/SAML flows, redirect URIs, web origins, protocol mappers), roles, groups, users, identity providers, and authentication flows — along with `Done`/`Started`/`HasErrors` status conditions and `kubectl get keycloakrealmimport` verification.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/apis/rest_api/index.mdx": {
+      "sha256": "cab57c26449394ef89b46e849c0c2fd0ca3342923560368ee77e691e45e32848",
+      "size": 6283,
+      "description": "Guide to the Keycloak Admin REST API at `https://<host>/admin/realms/<realm>`, showing how to obtain bearer tokens via the `password` grant against `admin-cli` or the recommended `client_credentials` grant against a service-account client. Provides curl recipes for managing realms, users, clients (including secret regeneration), roles, groups, identity providers, and login/admin events, plus pagination (`first`/`max`), the standard 200/201/204/400/401/403/404/409 status codes, and a note that Keycloak exposes no runtime OpenAPI endpoint — only versioned static specs at `keycloak.org/docs-api`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/architecture.mdx": {
+      "sha256": "49f4e2636e3af93f5d5bb08e2cded9ca6030c1aee43b447f6f8fafac5c2bc614",
+      "size": 9918,
+      "description": "Architectural overview of Alauda Build of Keycloak as an Operator-driven, cloud-native deployment, with an ASCII diagram of the Operator reconciling `Keycloak` and `KeycloakRealmImport` CRs into a Keycloak Deployment backed by PostgreSQL and Ingress. Covers realm-based multi-tenancy, distributed session state via embedded Infinispan with DNS_PING/KUBE_PING discovery on port 7800, HA via `spec.instances` and pod scheduling, TLS at the pod or Ingress level, `networkPolicy`, hardened security contexts (non-root, drop-all caps, `RuntimeDefault` seccomp), and the realm/user/session/auth/offline/action-token cache layers.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/10-realm_and_tenant.mdx": {
+      "sha256": "abc42eeca61b4703cf026cc9dc11371c197d31b7de33fc8e3cab1ea939875cf7",
+      "size": 3221,
+      "description": "Explains Realms as Keycloak's foundational isolation unit — each owns its own users, credentials, roles, groups, clients, identity providers, authentication flows, and SSO sessions — and warns against using the built-in `master` realm for application identities. Compares the recommended one-realm-per-tenant pattern against shared-realm-with-groups for multi-tenancy, and shows how the `KeycloakRealmImport` CR enables GitOps-style realm management.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/20-sso_and_protocols.mdx": {
+      "sha256": "a073664102992aad5df683010a878141b310e0975b7e33fccd57809614cc2f95",
+      "size": 4367,
+      "description": "Conceptual primer on Keycloak SSO using realm-scoped session cookies and Single Logout (SLO), and on the three protocols it supports: OpenID Connect (ID/access/refresh tokens, UserInfo endpoint, Authorization Code, PKCE, Client Credentials, and Device Authorization flows), OAuth 2.0 grant types, and SAML 2.0 as both SP and IdP. Includes a protocol selection guide mapping scenarios (web/SPA/mobile/microservice/legacy/IoT) to recommended protocols and a token-lifespan table tied to `accessTokenLifespan` and `ssoSessionMaxLifespan`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/30-identity_federation.mdx": {
+      "sha256": "ad95189746703b3ece695c37a907f29b0b4ed439db09989543fc918b6752c268",
+      "size": 4580,
+      "description": "Explains how Keycloak brokers authentication to external identity sources rather than storing credentials itself. Covers User Federation against LDAP/Active Directory (Connection URL, Bind DN, User DN, `READ_ONLY` vs `WRITABLE` sync modes, periodic full and changed-user sync, and LDAP attribute/group/role mappers) versus IdP Brokering for OIDC/SAML providers and social logins (Google, GitHub, Microsoft Entra, ADFS, Okta), including the first-login flow options (create local user, link by email, require profile review) and guidance on which mechanism fits which scenario.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/35-account_console.mdx": {
+      "sha256": "5eaa3bbab1a3f7e0998fe7b90c71666bad369d1d2fe3916504c5984ac9cf8f2f",
+      "size": 2749,
+      "description": "Describes the self-service Account Console at `/realms/<realm>/account` where authenticated users manage Personal Info, Account Security (password changes, OTP setup via FreeOTP/Google Authenticator, WebAuthn security keys), Device Activity (view and remotely sign out sessions), Linked Accounts, and consented Applications. Notes administrator controls — user profile read-only attributes, Required Actions, self-registration toggles, the Delete Account action — and points to the `account` theme for branding customization.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/40-authorization_services.mdx": {
+      "sha256": "71d97e4d0420d1388735faa76b834d9b20b86041d95d08640114524b2de684d9",
+      "size": 4814,
+      "description": "Conceptual overview of Keycloak's UMA-based fine-grained Authorization Services, which externalize authorization from application code into a centralized policy engine using Resource Servers, Resources, Scopes, Permissions, Policies, and Requesting Party Tokens (RPTs). Catalogs supported policy types (user, role, group, client, time, JavaScript, aggregated, regex, client scope), decision strategies (Unanimous, Affirmative, Consensus), the runtime evaluation flow against the token endpoint or token introspection, and how to enable Authorization on a confidential client.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/50-extensibility.mdx": {
+      "sha256": "444698a9eddfbfc91c6b8a65b3e4021093719649a9855ad1d53d2003e6d7e284",
+      "size": 5400,
+      "description": "Explains Keycloak's SPI extension model (Authenticator, User Storage, Protocol Mapper, Event Listener, Required Action, Identity Provider, Theme, Policy Provider, Vault) and how to package a custom provider as a JAR using `ProviderFactory` and `META-INF/services`. Emphasizes that Keycloak 26.x (Quarkus) requires JARs to be present during the `kc.sh build` phase, mandates a custom Dockerfile (`FROM quay.io/keycloak/keycloak:26.4.7`) that copies providers to `/opt/keycloak/providers/` and re-runs the build with build-time flags like `--health-enabled`/`--metrics-enabled`, and warns that `unsupported.podTemplate` runtime mounts and `additionalOptions` for build-time flags are not supported with prebuilt images.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/concepts/index.mdx": {
+      "sha256": "3d0dbaaf91e55dec9347b682ccf0872f254e7d5f7c3f189d432cecd38ab438f9",
+      "size": 66,
+      "description": "Landing page for the Concepts section (weight 90) of the Alauda Build of Keycloak documentation; renders an Overview component that links to the realm/multi-tenancy, SSO/protocols, identity federation, account console, authorization services, and extensibility chapters.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/10-create_instance.mdx": {
+      "sha256": "7ecfb125838fba9fc73e22a9ced5e14b10c5c47c89aba173976cfa587d3f024e",
+      "size": 4550,
+      "description": "Task guide for provisioning a Keycloak instance via the `Keycloak` CR, with prerequisites (Operator installed, PostgreSQL reachable, credentials Secret in place) and side-by-side CLI (`kubectl apply`) and Web Console procedures under **Application Services** > **Keycloak**. Provides a baseline single-instance manifest with the hardened `unsupported.podTemplate` security context, a `kubectl get keycloak` readiness check using a custom-columns Ready condition selector, and a three-replica HA example with TLS, NGINX Ingress (`xforwarded` proxy headers), and pod anti-affinity across hostnames.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/20-manage_realms.mdx": {
+      "sha256": "0f4516ab33012f402fbab167b8bf570cdca1e1e69100e9ea576842d4767d7273",
+      "size": 4065,
+      "description": "Walks through Realm provisioning in Alauda Build of Keycloak using both the declarative `KeycloakRealmImport` CRD (with `spec.placeholders` for injecting Secret-backed client secrets) and the Admin Console. Documents the one-time nature of CRD imports, covers core Realm settings (Display Name, SSL Required, login/email options, themes, SMTP), and gives default and production-recommended values for access token lifespan and SSO session idle/max timeouts.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/25-manage_clients.mdx": {
+      "sha256": "b23cd0c71ca66fb073b47b6b93e4ee9795fb57b60506ceab4b76c6148e0142f4",
+      "size": 10138,
+      "description": "Explains how to register and operate applications as Clients in Keycloak, distinguishing public, confidential, and bearer-only types and showing OIDC and SAML client creation via the Admin Console and Admin REST API. Covers Authorization Code flow with PKCE, service accounts using `client_credentials`, redirect URI and Web Origin (CORS) configuration, SAML SP settings (Entity ID, ACS URL, signing), client secret regeneration versus policy-driven rotation, Protocol Mappers, Client Scopes (default vs optional with the Evaluate sub-tab), and Client Policies including FAPI 1 Baseline/Advanced and FAPI CIBA profiles.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/30-manage_users.mdx": {
+      "sha256": "3e24d7ccbc517a42c51f9cbf064509584798d110651843a5e210b261fc88ef42",
+      "size": 7574,
+      "description": "Covers per-Realm user lifecycle in Keycloak, including creating users (Admin Console and REST API with temporary password credentials), resetting passwords, and assigning Realm vs Client roles. Details groups, composite roles, and Keycloak's fine-grained admin model: super admins in the `master` realm versus realm-scoped admins, the `view-*` / `manage-*` / `query-*` role pattern from the `realm-management` client, permission boundaries that prevent privilege escalation, and a recipe for creating a delegated admin that uses the per-realm Admin Console URL `/admin/<realm>/console`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/35-configure_identity_providers.mdx": {
+      "sha256": "65f1f16955f5a6965602b24ca08f495b227e4e61c254d85dd02118a89087da93",
+      "size": 8162,
+      "description": "Configures Keycloak as an identity broker to external IdPs over OIDC (with discovery-endpoint auto-population), SAML 2.0 (including SP metadata download from `/realms/<realm>/broker/<alias>/endpoint/descriptor`), and built-in social providers like GitHub, Google, Microsoft Entra ID, GitLab, and Facebook. Covers IdP Mappers (Attribute Importer, Hardcoded Role/Group, Username Template Importer, Advanced Claim to Role, SAML Attribute to Role), customizing the First Broker Login flow to control profile review and account linking, setting a default IdP via the Identity Provider Redirector or per-request `kc_idp_hint`, and enabling cascading backchannel or front-channel broker logout.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/40-monitor.mdx": {
+      "sha256": "dbeba968c12ae62c0a695e5ba42707398102f0dca6d9c6e449eed1a2e0aebcc1",
+      "size": 9836,
+      "description": "Describes Keycloak's Prometheus-compatible metrics exposed on the management port (default `9000` at `/metrics`), enabled via `metrics-enabled` in the `Keycloak` CR. Lists JVM, HTTP, Agroal DB-pool, Infinispan cache, and native Keycloak 26.x user event metrics (`keycloak_user_events_total` with `event` labels, requiring `--event-metrics-user-enabled=true`), provides recommended alerting queries, sample `ServiceMonitor` and scrape configs, and documents `/health`, `/health/live`, `/health/ready`, `/health/started` endpoints. Also covers OpenTelemetry tracing fields under `spec.tracing` (endpoint, sampler, protocol) and the built-in event auditing system with `jboss-logging` and `email` listeners plus REST API event queries.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/50-configure_authentication.mdx": {
+      "sha256": "a2303144f2ed0bb126765a3d42633caac117c1d303a770aef8789db90056f34e",
+      "size": 10050,
+      "description": "Configures Keycloak authentication policies and flows, including password policies (length, complexity, history, hashing algorithm such as `pbkdf2-sha512`, iterations), TOTP and HOTP OTP policies, and built-in flows (Browser, Direct Grant, Registration, Reset Credentials, First Broker Login, Client Authentication). Walks through duplicating and binding custom flows with Required/Alternative/Conditional steps, enabling WebAuthn as a second factor or for passwordless login (Resident Key, User Verification, Authenticator Attachment), X.509 client certificate authentication with CRL/OCSP checks, Kerberos/SPNEGO, ACR-to-LoA step-up authentication, and user session count limiters.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/55-manage_sessions.mdx": {
+      "sha256": "b07b3c6a1ffd7ae14d9237a9f2f908f527b0f55ee7465abf0eade3c12eef33b6",
+      "size": 4713,
+      "description": "Manages Keycloak user sessions across the Realm, individual users, and clients, including signing out single sessions or all sessions in a Realm, and using the Revocation policy with a `Not Before` push to invalidate every token issued earlier. Documents SSO session idle/max timeouts, client session idle/max, access token and login action lifespans, Remember Me-specific timeouts, and offline sessions: configuring `Offline Session Idle`/`Offline Session Max Limited`, granting the `offline_access` scope and role, and using long-lived refresh tokens for background operations.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/60-configure_authorization.mdx": {
+      "sha256": "326cdbc4aaa614c1f78e63756b72ad938a2e54d72d9b4f8918b118eb2538d471",
+      "size": 5314,
+      "description": "Step-by-step guide for enabling Keycloak Authorization Services on a confidential OIDC client and modeling fine-grained access control by defining Resources (with URI patterns and scopes), Authorization Scopes, and Policies (Role, Group with `Extend to Children`, Time, User, and Aggregated with Unanimous/Affirmative/Consensus decision strategies). Shows how to bind Permissions (resource-based and scope-based) to policies, use the Evaluate tab to test PERMIT/DENY decisions for a given user and client context, exchange access tokens for a Requesting Party Token via the UMA ticket grant, introspect RPTs, and export/import authorization configurations.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/functions/index.mdx": {
+      "sha256": "73e78ed7b1a8894b7f4a177e581b0d6c50eaa520fd4eb7278c1072af3c7437e0",
+      "size": 64,
+      "description": "Top-level entry page for the Functions section of the Alauda Build of Keycloak documentation, rendered via the shared `<Overview>` component which automatically lists the child function guides (Realms, Clients, Users, IdPs, Monitoring, Authentication, Sessions, Authorization).",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/10-configure_ingress_tls.mdx": {
+      "sha256": "355a0c1714d3b8f1ac3bd68196119fef98b85ad4bcb0d60d5643ffc3bf51bbf1",
+      "size": 3851,
+      "description": "Production deployment guide for exposing Keycloak through Kubernetes Ingress with TLS, comparing pod-level termination (`spec.http.tlsSecret`) against Ingress-level termination (`spec.ingress.tlsSecret` with `spec.http.httpEnabled`). Provides a complete `Keycloak` CR example for NGINX Ingress with `spec.hostname.hostname`, `spec.proxy.headers: xforwarded`, hardened `securityContext` (non-root, dropped capabilities, `RuntimeDefault` seccomp), Secret creation via `kubectl create secret tls`, and post-apply verification steps using `kubectl get ingress` and `kubectl get keycloak`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/20-configure_ldap_federation.mdx": {
+      "sha256": "ad90f3bc876d4d661f644ccfb55e3bc44847c4b9f13c4c4f0e39494c5790dc39",
+      "size": 8346,
+      "description": "End-to-end procedure for federating users from LDAP or Microsoft Active Directory into Keycloak, including connection setup (LDAPS on 636 or StartTLS on 389), Bind DN with Test connection/authentication, user search settings (`Users DN`, `sAMAccountName`/`uid`, `objectGUID`/`entryUUID`, search scope), and the READ_ONLY/WRITABLE/UNSYNCED edit modes. Configures periodic full and changed-user syncs, default attribute mappers (username, email, given/sn name), `group-ldap-mapper` and `role-ldap-mapper` for synchronizing groups and Realm roles, mounting a custom CA into the Keycloak JVM truststore via `spi-truststore-file-*` options and pod volumes, and ships a troubleshooting table for common failures.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/25-configure_database.mdx": {
+      "sha256": "3db658f059d0cd0772c9b4d322521c5fe422ed3709706c85c608eff2756ea3e1",
+      "size": 4227,
+      "description": "Configures the relational database backing a production Keycloak deployment, with Alauda Build of Keycloak validated on PostgreSQL only (other vendors supported upstream are at users' own risk). Details the `spec.db` fields in the `Keycloak` CR (`vendor`, `host`, `port`, `database`, `schema`, `url`, `usernameSecret`/`passwordSecret`, `poolInitialSize`/`Min`/`Max`), shows creating a `keycloak-db-secret` via `kubectl`, computes total connections as `poolMaxSize * replicas`, and recommends managed HA databases or PostgreSQL Operators (CloudNativePG, Zalando). Covers automatic forward-only schema migrations on Keycloak upgrade and the requirement for tested point-in-time backups.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/30-migrate_from_rhsso.mdx": {
+      "sha256": "28be8532eb82af536f6f802342bcf7a6338ca19c39b9ad556b327ad5c1149d9a",
+      "size": 4787,
+      "description": "Migration runbook for moving identity data from Red Hat Single Sign-On 7.x on OpenShift to Alauda Build of Keycloak on Kubernetes, leveraging core data-model compatibility between the two distributions. Uses `oc rsh` plus `standalone.sh` with `-Dkeycloak.migration.action=export -Dkeycloak.migration.provider=singleFile -Djboss.socket.binding.port-offset=502` to export to `/tmp/sso-export.json`, then `oc cp` and `kubectl cp` to relay the file into the target Keycloak Pod, and finally `kc.sh import --file ... --override true` to load Realms, users (with credentials), clients, roles, composite roles, and permission mappings. Notes that a trailing `ERROR: Address already in use` after import is benign.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/35-import_export.mdx": {
+      "sha256": "d2b0bbdeeac32beb169dab0644ef364dd9a565b02032d435e22c3a7f369ec25a",
+      "size": 5544,
+      "description": "Comprehensive reference for moving Realm configurations in and out of Keycloak: Admin Console Partial Export (no users or secrets), full `kc.sh export` via `kubectl exec` (with `--users realm_file`/`same_file`/`skip`/`different_files`), live Admin REST API extraction, and three import paths — the `KeycloakRealmImport` CRD (preferred but strictly one-shot, create-only, no reconciliation), `kc.sh import --override true`, and Admin Console JSON upload. Also documents an environment-to-environment migration recipe that sanitizes URLs/secrets and replaces sensitive values with `KeycloakRealmImport` placeholders.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/40-security_hardening.mdx": {
+      "sha256": "e5b0da2e3fe6565413800ca187d23acc8ecd21e26dc4194de10c3eb6834e5164",
+      "size": 8200,
+      "description": "Production security checklist for Keycloak covering brute force detection (temporary vs permanent lockout, `Max login failures`, `Wait increment`, `Failure reset time`), restricting admin endpoints via Kubernetes `NetworkPolicy` and a separate `spec.hostname.admin` internal hostname, and avoiding wildcard redirect URIs. Configures security headers (`X-Frame-Options`, CSP, HSTS, nosniff), enforces SSL via `Require SSL = external requests`, recommends short access token lifespans plus refresh token rotation (`Revoke Refresh Token`, `Refresh Token Max Reuse = 0`), audience claim restriction for API clients, read-only user profile attributes, and the Kubernetes Secrets vault provider via `${vault.<key>}` and `KeycloakRealmImport` `spec.placeholders`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/50-customize_themes.mdx": {
+      "sha256": "8991b52baccc3dc9604eaa6ae784dd70d6cce8082c86584ffb4bb2af739351ff",
+      "size": 6926,
+      "description": "Walks through customizing Keycloak themes (Login, Account, Admin, Email, Welcome) in an Operator-managed Kubernetes deployment, covering the theme directory layout, `theme.properties`, CSS overrides, FreeMarker templates, and message bundles for i18n. Compares two deployment options: building a custom container image from `quay.io/keycloak/keycloak:26.4.7` that bakes the theme via `kc.sh build` (recommended for production) versus mounting a ConfigMap through `unsupported.podTemplate` (development only, with 1 MiB and stability caveats).",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/how_to/index.mdx": {
+      "sha256": "cd48c41e514c3b94b8d7d34bf4c8e5dccc60d06c4f32baa06b7619bdf1d15927",
+      "size": 267,
+      "description": "Landing page for the How-To guides section of Alauda Build of Keycloak, pointing readers to step-by-step procedures for common operational tasks such as TLS and Ingress configuration, multi-factor authentication, and identity data migration. Uses an `<Overview />` component to render the table of contents.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/index.mdx": {
+      "sha256": "037e001cae7f0ec4b6f33cc2196b5f701f14df7c3d34d73e093e1a5f7ddb4e86",
+      "size": 67,
+      "description": "Top-level navigation entry for the English Alauda Build of Keycloak documentation set, rendering an automatic overview (`<Overview overviewHeaders={[]} />`) of all child sections (Introduction, Install, Quick Start, Integration, How-To, Release Notes, Upgrade, Lifecycle Policy).",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/install.mdx": {
+      "sha256": "6bb748554bcb1fc20dbce29b660acf7728bc396ce60a3d38f99315df2bcaa1c8",
+      "size": 2560,
+      "description": "Installation procedure for the Alauda Build of Keycloak Operator plugin via the platform Marketplace, listing prerequisites (Kubernetes 1.25+, 2 CPU / 2 GiB headroom, PostgreSQL 13+) and recommended Marketplace settings (Manual upgrade strategy, Cluster install mode, stable channel). Includes `kubectl` verification commands to confirm the `keycloak-operator` Pod is Running and that the `keycloaks.k8s.keycloak.org` and `keycloakrealmimports.k8s.keycloak.org` CRDs are installed.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/integration/10-secure_app_with_oidc.mdx": {
+      "sha256": "361a007fb308cc2279b23a7345ca2758101d76206d8f85dafc06735533a10e29",
+      "size": 6226,
+      "description": "End-to-end OIDC integration recipe positioning Keycloak 26.x as an IdP for client apps using standard OAuth 2.0 libraries (Spring Security, `oidc-client-ts`, `coreos/go-oidc`, `openid-client`, Authlib, ASP.NET Core) rather than deprecated Keycloak adapters. Demonstrates the Authorization Code + PKCE flow with concrete `auth` / `token` curl examples, resource-server JWT validation via the JWKS endpoint, RP-initiated and back-channel logout, refresh-token rotation, plus guidance on Client Credentials, Device Code, and Token Exchange grants and why ROPC is discouraged.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/integration/20-oidc_endpoints_reference.mdx": {
+      "sha256": "d5dad71a955e2969d5a741b2d98472d3e9c32ac8452f4a9de0d401bddd063f0d",
+      "size": 4220,
+      "description": "Reference table of every standard endpoint each Keycloak Realm exposes under `/realms/<realm>/`: the OIDC discovery document, authorization, token, userinfo, JWKS (`/protocol/openid-connect/certs`), end-session/logout, token introspection, and revocation. Also documents Dynamic Client Registration, Device Authorization, CIBA backchannel auth, SAML descriptor/SSO, and the Admin REST API base path, plus token-endpoint authentication methods (`client_secret_post`, `client_secret_basic`, `client_secret_jwt`, `private_key_jwt`, `none`) and the claims emitted by each supported scope.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/integration/index.mdx": {
+      "sha256": "678f1a2b2356f0781df839c6e1754fdf2d8e70fd791355f95ac0656b198d14ef",
+      "size": 214,
+      "description": "Section landing page for application-integration guides, framing the subsequent docs as instructions for wiring client applications into Keycloak using standard authentication and authorization protocols. Renders the section overview through the `<Overview />` component.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/intro.mdx": {
+      "sha256": "c494be1d1c0192ad6bca9951b72ca40ef620d1a1993bd1c1efabea6b710fa410",
+      "size": 5584,
+      "description": "Introduces upstream Keycloak as a Red Hat-led open-source IAM platform supporting OIDC, SAML 2.0, OAuth 2.0, MFA/SSO, LDAP/AD federation, and Kubernetes-native deployment, then introduces Alauda Build of Keycloak as a Kubernetes-optimized distribution that manages the Keycloak lifecycle declaratively via CRDs (including `KeycloakRealmImport` for GitOps). Closes with a comparison table contrasting upstream Keycloak (Apache 2.0, rapid releases, community support) against Red Hat Single Sign-On (RH-SSO) (7+ year commercial support, slower iteration, paid subscription).",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/lifecycle_policy.mdx": {
+      "sha256": "b055b306abfbee15f4368bac3e833af5c588465d671e9b461e0615ff686cfa18",
+      "size": 1548,
+      "description": "Defines the rolling support model for Alauda Build of Keycloak: each minor version remains supported until the next minor release plus one month, multiple major versions may be maintained concurrently, and patch releases deliver fixes. Currently lists version `v26.4.7-20260121113811` (Keycloak 26.4.7, released 2026-01-21) and outlines the maintenance services provided — security updates aligned with upstream advisories, bug fixes, upgrade assistance, and Kubernetes-ecosystem compatibility maintenance.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/quick_start.mdx": {
+      "sha256": "b6b198ed763eb2b16670826a18bcad7ba64bac7218edba590fe5576d060a75e8",
+      "size": 4909,
+      "description": "Hands-on getting-started guide for deploying a Keycloak instance after Operator installation: create a `keycloak-db-secret`, optionally spin up a development PostgreSQL StatefulSet (with `emptyDir` warning), then apply a `Keycloak` CR (`k8s.keycloak.org/v2alpha1`) wiring `spec.db`, `spec.http`, `additionalOptions` (`metrics-enabled`, `hostname-strict`), and a hardened `unsupported.podTemplate` security context (non-root, drop ALL caps, RuntimeDefault seccomp). Shows how to retrieve the auto-generated `<name>-initial-admin` Secret and reach the Admin Console via `kubectl port-forward`.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/release_notes.mdx": {
+      "sha256": "76631c7d9b55a81802d36468bf2e1b60f873037d3062d999ed16fdd676bbec0a",
+      "size": 299,
+      "description": "Per-version changelog for Alauda Build of Keycloak. The current entry, `v26.4.7-20260121113811` (released 2026-01-21), records the addition of upstream Keycloak 26.4.7 support and notes that all newly created instances default to that version.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    },
+    "docs/en/upgrade.mdx": {
+      "sha256": "a06abb98bf392bd83dae35579466c7dd0241218a262283ce3cf071b93f86d237",
+      "size": 3237,
+      "description": "Operator upgrade guidance covering the supported version/Kubernetes compatibility matrix, pre-upgrade prerequisites (instance `Ready` status check via a `kubectl get keycloak` custom-columns query, PostgreSQL backup, resource headroom), and the recommended consecutive-version upgrade path. Documents Web Console and CLI upgrade procedures, contrasts Automatic vs Manual OLM subscription strategies (Manual recommended for production), and warns that schema migrations applied during upgrade are not reversible, so downgrades are unsupported.",
+      "generation_method": "ai_agent_reading",
+      "updated_at": "2026-05-16T06:24:40Z"
+    }
+  }
+}
