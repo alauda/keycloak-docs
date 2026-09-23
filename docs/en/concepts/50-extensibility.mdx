@@ -47,8 +47,17 @@ This means:
 
 Build a custom Keycloak image with your extensions included:
 
+<Directive type="warning" title="Base your custom image on the product image">
+The example below uses the upstream community image so that it is runnable as written. Building
+from the community image produces a community Keycloak™ build: it does not carry the base image,
+packaging or patches of Alauda Application Services Identity Management E1, and it is not covered by
+the support policy on this site. For a supported custom image, base it on the product's own server
+image — the image reference the installed Operator uses for its instances — and keep the version
+aligned with the release you are running.
+</Directive>
+
 ```dockerfile
-FROM quay.io/keycloak/keycloak:26.4.7 as builder
+FROM quay.io/keycloak/keycloak:26.7.4 as builder
 
 # Copy custom provider JARs
 COPY my-custom-authenticator.jar /opt/keycloak/providers/
@@ -60,7 +69,7 @@ RUN /opt/keycloak/bin/kc.sh build \
   --health-enabled=true \
   --metrics-enabled=true
 
-FROM quay.io/keycloak/keycloak:26.4.7
+FROM quay.io/keycloak/keycloak:26.7.4
 
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
@@ -71,7 +80,7 @@ Update the `Keycloak` CR to use the custom image:
 
 ```yaml
 spec:
-  image: my-registry.example.com/keycloak-custom:26.4.7
+  image: my-registry.example.com/keycloak-custom:26.7.4
 ```
 
 <Directive type="warning" title="Build Phase Is Mandatory">

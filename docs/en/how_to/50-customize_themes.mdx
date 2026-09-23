@@ -101,8 +101,17 @@ In a Kubernetes Operator-managed deployment, custom themes must be made availabl
 
 Build a custom container image with the theme pre-installed:
 
+<Directive type="warning" title="Base your custom image on the product image">
+The example below uses the upstream community image so that it is runnable as written. Building
+from the community image produces a community Keycloak™ build: it does not carry the base image,
+packaging or patches of Alauda Application Services Identity Management E1, and it is not covered by
+the support policy on this site. For a supported custom image, base it on the product's own server
+image — the image reference the installed Operator uses for its instances — and keep the version
+aligned with the release you are running.
+</Directive>
+
 ```dockerfile
-FROM quay.io/keycloak/keycloak:26.4.7
+FROM quay.io/keycloak/keycloak:26.7.4
 
 # Copy custom theme
 COPY my-custom-theme /opt/keycloak/themes/my-custom-theme
@@ -116,15 +125,15 @@ RUN /opt/keycloak/bin/kc.sh build \
 Build and push the image:
 
 ```bash
-docker build -t my-registry.example.com/keycloak-custom:26.4.7 .
-docker push my-registry.example.com/keycloak-custom:26.4.7
+docker build -t my-registry.example.com/keycloak-custom:26.7.4 .
+docker push my-registry.example.com/keycloak-custom:26.7.4
 ```
 
 Update the `Keycloak` CR to use the custom image:
 
 ```yaml
 spec:
-  image: my-registry.example.com/keycloak-custom:26.4.7
+  image: my-registry.example.com/keycloak-custom:26.7.4
 ```
 
 <Directive type="warning" title="Build-Time Options in Custom Images">
