@@ -1,8 +1,8 @@
 # llms.txt Generator Configuration for alauda/keycloak-docs
 # Repo kind: pure-docs
 
-project_name: "Keycloak Docs"
-summary: "Documentation for the Alauda Keycloak (Alauda Container Security) product, an enterprise IAM platform based on Keycloak."
+project_name: "Alauda Application Services Identity Management E1 Docs"
+summary: "Documentation for Alauda Application Services Identity Management E1, an enterprise identity and access management product built on Keycloak™."
 
 include_patterns:
   - "**/*.md"
