@@ -22,7 +22,7 @@ runAsNonRoot != true (pod or container "keycloak" must set securityContext.runAs
 The custom resource's own status may show no error at all: the objects the Operator submitted were
 accepted, and it is the **pod** that is refused.
 
-Confirm the trigger by reading the namespace labels:
+Confirm the namespace is enforcing the profile:
 
 ```bash
 kubectl get ns <namespace> -o jsonpath='{.metadata.labels}'
@@ -30,43 +30,63 @@ kubectl get ns <namespace> -o jsonpath='{.metadata.labels}'
 
 A `pod-security.kubernetes.io/enforce: restricted` label is the condition.
 
-## Cause
+## On this release, the Operator already handles it
 
-The Operator does not set a `securityContext` on the pods it generates, so the pod inherits the
-cluster defaults. Those defaults satisfy the `baseline` Pod Security Standard but not `restricted`,
-which additionally requires `runAsNonRoot`, a `RuntimeDefault` seccomp profile, all capabilities
-dropped, and privilege escalation disabled.
+From 26.7.4 the Operator sets a `restricted`-compliant security context on the pods it generates,
+so a plain `Keycloak` resource is admitted in an `enforce=restricted` namespace with no extra
+configuration. It sets, at pod level:
 
-This is a gap in what the API lets you express, not a limitation of the server. The Keycloak™
-container image already runs as a non-root user and requires no Linux capabilities and no privilege
-escalation — the configuration below is admitted and runs with `runAsNonRoot: true` and no
-`runAsUser`, which the kubelet permits only when the image itself declares a non-root user.
+- `runAsNonRoot: true`
+- `seccompProfile.type: RuntimeDefault`
 
-## Workaround
+and on the container:
 
-Supply the security context through `spec.unsupported.podTemplate`. Despite the field name, the pod
-template is a standard Kubernetes `PodTemplateSpec` and is the supported route for pod-level
-settings the CRD does not model; the Operator uses it as the base of the pod it builds.
+- `allowPrivilegeEscalation: false`
+- `runAsNonRoot: true`
+- `seccompProfile.type: RuntimeDefault`
+- `capabilities.drop: ["ALL"]`
+
+The same context is applied to the realm-import and update Jobs, so an upgrade and a realm import
+are admitted too.
+
+`runAsUser` is deliberately **not** set: the server image already declares a non-root user, and
+pinning an id collides with the per-namespace UID range that OpenShift's SCC assigns.
+`readOnlyRootFilesystem` is not set either — `restricted` does not require it.
+
+## If you still see the rejection
+
+Each field above is defaulted **independently**, and an explicit value of yours always wins. So the
+rejection can only return if something sets one of those fields to a non-compliant value. The place
+that happens is `spec.unsupported.podTemplate`:
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2beta1
-kind: Keycloak
-metadata:
-  name: example
 spec:
-  instances: 1
-  db:
-    vendor: postgres
-    host: postgres-db
-    database: keycloak
-    usernameSecret:
-      name: keycloak-db-secret
-      key: username
-    passwordSecret:
-      name: keycloak-db-secret
-      key: password
-  http:
-    httpEnabled: true
+  unsupported:
+    podTemplate:
+      spec:
+        securityContext:
+          runAsNonRoot: false      # <- your value wins, and it is not compliant
+```
+
+Read what the pod actually got:
+
+```bash
+kubectl -n <namespace> get pod <pod> \
+  -o jsonpath='{.spec.securityContext}{"\n"}{.spec.containers[0].securityContext}{"\n"}'
+```
+
+Remove the offending override, or correct it to a compliant value.
+
+`capabilities.drop` is defaulted inside any `capabilities` block you already have, so adding a
+capability does not silently remove the `drop: ["ALL"]` the profile requires.
+
+## Earlier releases
+
+On releases before 26.7.4 the Operator sets no security context, and a plain resource is rejected.
+Supply one through `spec.unsupported.podTemplate`:
+
+```yaml
+spec:
   unsupported:
     podTemplate:
       spec:
@@ -85,24 +105,8 @@ spec:
                 type: RuntimeDefault
 ```
 
-`allowPrivilegeEscalation` and `capabilities` have no pod-level form, so they must be set on the
-container entry. The container entry carries no `name`: the template is the base the Operator builds
-on, and it fills in the container's name and image itself.
-
-Do not set `runAsUser`. The image already declares a non-root user, and pinning a specific id
-collides with the per-namespace UID range that OpenShift's SCC assigns.
-
-Realm import needs no separate configuration. The realm-import Job copies its pod template from the
-instance's StatefulSet, so the same security context reaches it.
-
-## Verify
-
-```bash
-kubectl -n <namespace> get pod -l app=keycloak
-kubectl -n <namespace> get pod <pod> -o jsonpath='{.spec.securityContext}{"\n"}{.spec.containers[0].securityContext}{"\n"}'
-```
-
-The pod is `Running`, and both security contexts are populated.
+The container entry carries no `name`: the template is the base the Operator builds on, and it
+fills in the container's name and image itself.
 
 ## Alternative: relax the namespace
 
@@ -112,8 +116,7 @@ If the namespace does not have to enforce `restricted`, label it `baseline` inst
 kubectl label ns <namespace> pod-security.kubernetes.io/enforce=baseline --overwrite
 ```
 
-The instance then starts with no custom resource changes. Use this only where your security policy
-allows it; `restricted` is the stricter of the two profiles and the workaround above keeps it.
+Use this only where your security policy allows it.
 
 ---
 
