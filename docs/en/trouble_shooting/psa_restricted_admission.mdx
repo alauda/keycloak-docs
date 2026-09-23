@@ -1,0 +1,120 @@
+---
+weight: 10
+---
+
+# Instance pod never created under Pod Security Admission
+
+## Symptom
+
+A `Keycloak` custom resource is accepted, the StatefulSet is created, and then nothing else
+happens. No pod ever appears, and the instance never becomes ready.
+
+The StatefulSet's events carry the reason:
+
+```
+create Pod <instance>-0 in StatefulSet <instance> failed error:
+pods "<instance>-0" is forbidden: violates PodSecurity "restricted:latest":
+allowPrivilegeEscalation != false (container "keycloak" must set securityContext.allowPrivilegeEscalation=false),
+unrestricted capabilities (container "keycloak" must set securityContext.capabilities.drop=["ALL"]),
+runAsNonRoot != true (pod or container "keycloak" must set securityContext.runAsNonRoot=true)
+```
+
+The custom resource's own status may show no error at all: the objects the Operator submitted were
+accepted, and it is the **pod** that is refused.
+
+Confirm the trigger by reading the namespace labels:
+
+```bash
+kubectl get ns <namespace> -o jsonpath='{.metadata.labels}'
+```
+
+A `pod-security.kubernetes.io/enforce: restricted` label is the condition.
+
+## Cause
+
+The Operator does not set a `securityContext` on the pods it generates, so the pod inherits the
+cluster defaults. Those defaults satisfy the `baseline` Pod Security Standard but not `restricted`,
+which additionally requires `runAsNonRoot`, a `RuntimeDefault` seccomp profile, all capabilities
+dropped, and privilege escalation disabled.
+
+This is a gap in what the API lets you express, not a limitation of the server. The Keycloak™
+container image already runs as a non-root user and requires no Linux capabilities and no privilege
+escalation — the configuration below is admitted and runs with `runAsNonRoot: true` and no
+`runAsUser`, which the kubelet permits only when the image itself declares a non-root user.
+
+## Workaround
+
+Supply the security context through `spec.unsupported.podTemplate`. Despite the field name, the pod
+template is a standard Kubernetes `PodTemplateSpec` and is the supported route for pod-level
+settings the CRD does not model; the Operator uses it as the base of the pod it builds.
+
+```yaml
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: example
+spec:
+  instances: 1
+  db:
+    vendor: postgres
+    host: postgres-db
+    database: keycloak
+    usernameSecret:
+      name: keycloak-db-secret
+      key: username
+    passwordSecret:
+      name: keycloak-db-secret
+      key: password
+  http:
+    httpEnabled: true
+  unsupported:
+    podTemplate:
+      spec:
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: RuntimeDefault
+```
+
+`allowPrivilegeEscalation` and `capabilities` have no pod-level form, so they must be set on the
+container entry. The container entry carries no `name`: the template is the base the Operator builds
+on, and it fills in the container's name and image itself.
+
+Do not set `runAsUser`. The image already declares a non-root user, and pinning a specific id
+collides with the per-namespace UID range that OpenShift's SCC assigns.
+
+Realm import needs no separate configuration. The realm-import Job copies its pod template from the
+instance's StatefulSet, so the same security context reaches it.
+
+## Verify
+
+```bash
+kubectl -n <namespace> get pod -l app=keycloak
+kubectl -n <namespace> get pod <pod> -o jsonpath='{.spec.securityContext}{"\n"}{.spec.containers[0].securityContext}{"\n"}'
+```
+
+The pod is `Running`, and both security contexts are populated.
+
+## Alternative: relax the namespace
+
+If the namespace does not have to enforce `restricted`, label it `baseline` instead:
+
+```bash
+kubectl label ns <namespace> pod-security.kubernetes.io/enforce=baseline --overwrite
+```
+
+The instance then starts with no custom resource changes. Use this only where your security policy
+allows it; `restricted` is the stricter of the two profiles and the workaround above keeps it.
+
+---
+
+Keycloak™ is a trademark of The Linux Foundation. Alauda is an independent vendor. This product is not affiliated with, endorsed by, or sponsored by The Linux Foundation. All trademarks are the property of their respective owners and are used here for identification purposes only.
