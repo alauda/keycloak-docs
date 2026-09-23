@@ -5,14 +5,14 @@ weight: 50
 # Upgrade
 
 <Directive type="note">
-This document provides the upgrade path principles and supported version compatibility for Alauda Build of Keycloak.
+This document provides the upgrade path principles and supported version compatibility for Alauda Application Services Identity Management E1.
 </Directive>
 
 ## Compatibility Matrix
 
-The table below lists supported versions of Alauda Build of Keycloak and its key components. For version-specific changes, new features, and deprecations, see the **[Release Notes](./release_notes.mdx)**.
+The table below lists supported versions of Alauda Application Services Identity Management E1 and its key components. For version-specific changes, new features, and deprecations, see the **[Release Notes](./release_notes.mdx)**.
 
-| Alauda Build of Keycloak Version | Keycloak Version | Kubernetes Version |
+| Release | Upstream Keycloak™ | Kubernetes |
 |:--------------------------------:|:----------------:|:------------------:|
 | v26.4.7-20260121113811 | 26.4.7 | 1.25+ |
 
@@ -52,7 +52,7 @@ Once the Operator upgrades and applies database schema migrations, **downgrading
   <Tab label="Web Console">
     1. Log in to the platform and go to the **Platform Management** page.
     2. In the left navigation bar, select **Marketplace** > **Cluster Plugins**.
-    3. Find **Alauda Build of Keycloak** and click **Upgrade**.
+    3. Find **Alauda Application Services Identity Management E1** and click **Upgrade**.
     4. Select the target version and confirm the upgrade.
     5. Monitor the Operator Pod status until it returns to `Running`.
     6. Verify that all Keycloak instances return to `Ready` state.
@@ -72,8 +72,11 @@ Once the Operator upgrades and applies database schema migrations, **downgrading
 
 ## Upgrade Strategy
 
-Alauda Build of Keycloak executes upgrades based on the configured upgrade strategy in the Operator subscription:
+Alauda Application Services Identity Management E1 executes upgrades based on the configured upgrade strategy in the Operator subscription:
 
 - **Automatic**: Auto-upgrades are triggered immediately upon detecting a new Operator version in the channel. **Not recommended for production** — automatic upgrades bypass manual review of release notes and database migration changes.
 - **Manual**: Requires manual approval before initiating the upgrade process. This is the recommended strategy for production environments.
 
+---
+
+Keycloak™ is a trademark of The Linux Foundation. Alauda is an independent vendor. This product is not affiliated with, endorsed by, or sponsored by The Linux Foundation. All trademarks are the property of their respective owners and are used here for identification purposes only.
