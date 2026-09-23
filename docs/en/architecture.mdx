@@ -6,11 +6,11 @@ weight: 60
 
 # Architecture
 
-Alauda Build of Keycloak leverages Keycloak's cloud-native architecture to deliver a proven high-availability identity and access management solution, meeting enterprise requirements for secure, reliable, and elastically scalable authentication and authorization services.
+Alauda Application Services Identity Management E1 leverages the cloud-native architecture of Keycloak™ to deliver a proven high-availability identity and access management solution, meeting enterprise requirements for secure, reliable, and elastically scalable authentication and authorization services.
 
 ## Overall Architecture
 
-Alauda Build of Keycloak is deployed and managed through a Kubernetes Operator. The Operator watches for `Keycloak` and `KeycloakRealmImport` Custom Resources and reconciles the desired state into the cluster. The primary components are:
+Alauda Application Services Identity Management E1 is deployed and managed through a Kubernetes Operator. The Operator watches for `Keycloak` and `KeycloakRealmImport` Custom Resources and reconciles the desired state into the cluster. The primary components are:
 
 - **Keycloak Operator**: A controller that manages the lifecycle of Keycloak instances and Realm imports.
 - **Keycloak Server**: The identity provider and authorization server, running as a Kubernetes Deployment.
@@ -66,7 +66,7 @@ Keycloak supports fully customizable authentication flows. A flow is a sequence 
 
 ### Custom Resource Definitions
 
-Two CRDs define the Kubernetes API surface for Alauda Build of Keycloak:
+Two CRDs define the Kubernetes API surface for Alauda Application Services Identity Management E1:
 
 | CRD | Kind | Purpose |
 |:----|:-----|:--------|
@@ -85,7 +85,7 @@ The Operator continuously reconciles the actual state of Keycloak resources with
 
 ## High Availability
 
-For production deployments, Alauda Build of Keycloak supports high-availability configurations:
+For production deployments, Alauda Application Services Identity Management E1 supports high-availability configurations:
 
 - **Multiple Replicas**: Set `spec.instances` to 2 or more to run multiple Keycloak Pods. Kubernetes distributes traffic across all healthy replicas.
 - **Session Sharing**: Infinispan cluster communication ensures user sessions are shared across all replicas. If one Pod fails, users are transparently routed to another replica without re-authentication.
@@ -107,7 +107,7 @@ The `spec.networkPolicy` field controls which sources are allowed to reach the K
 
 ### Security Contexts
 
-Alauda Build of Keycloak enforces security hardening through Pod security contexts:
+Alauda Application Services Identity Management E1 enforces security hardening through Pod security contexts:
 
 - Running as non-root
 - Dropping all Linux capabilities
@@ -159,3 +159,7 @@ To ensure cluster formation works correctly:
 <Directive type="info" title="Cluster Formation is Operator-Managed">
 You do not need to manually configure JGroups or Infinispan discovery. The Operator handles this based on the `spec.instances` count and the cluster environment. If Pods are not forming a cluster, verify network connectivity between Pods on port `7800` and check the Operator logs for discovery errors.
 </Directive>
+
+---
+
+Keycloak™ is a trademark of The Linux Foundation. Alauda is an independent vendor. This product is not affiliated with, endorsed by, or sponsored by The Linux Foundation. All trademarks are the property of their respective owners and are used here for identification purposes only.
