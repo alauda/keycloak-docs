@@ -6,12 +6,55 @@ weight: 20
 
 This page covers the **26.7** line only. For the 26.4 line, see the 26.4 documentation set.
 
-## 26.7
+## 26.7.4
 
-The 26.7 line has **not been released yet**. Versions will be listed here as they ship, each
-with its release date and its upstream Keycloak™ version.
+**Release Date**: pending — this line has not shipped yet. The exact build identifier and the date
+are filled in here when it does.
 
-It is built on upstream Keycloak™ **26.7.4**.
+Built on upstream Keycloak™ **26.7.4**.
+
+### New Features
+
+#### Declarative client management
+
+Two new Custom Resources let an OIDC or SAML client be declared alongside the workload that uses it
+and reconciled into a running instance, instead of being created by hand in the Admin Console:
+
+- [`KeycloakOIDCClient`](./apis/kubernetes_apis/keycloak_oidc_client.mdx)
+- [`KeycloakSAMLClient`](./apis/kubernetes_apis/keycloak_saml_client.mdx)
+
+Both take the target instance by name in the same namespace, plus a realm and a client
+representation.
+
+#### Runs under a `restricted` namespace without extra configuration
+
+The Operator now sets a Pod Security Standards `restricted`-compliant security context on the
+resources it generates — pod-level `runAsNonRoot` and `seccompProfile`, container-level
+`allowPrivilegeEscalation`, `runAsNonRoot`, `seccompProfile` and `capabilities.drop` — and applies
+the same context to the realm-import and update Jobs.
+
+A plain `Keycloak` resource is therefore admitted in a namespace labelled
+`pod-security.kubernetes.io/enforce=restricted` with no `spec.unsupported.podTemplate` stanza.
+Each field is defaulted independently, so an explicit value of yours still wins. See
+[Instance pod never created under Pod Security Admission](./trouble_shooting/psa_restricted_admission.mdx).
+
+### API Changes
+
+`Keycloak` and `KeycloakRealmImport` are served at **`v2beta1`**, which is now the storage version.
+`v2alpha1` is still served for compatibility but is marked deprecated, and resources submitted as
+`v2alpha1` are converted and stored as `v2beta1`.
+
+⚠ Use `v2beta1` in new manifests. Every example in this documentation set has been updated.
+
+The two new client resources are `v2alpha1`; they have no other version.
+
+### Product Naming
+
+This product is now **Alauda Application Services Identity Management E1**. The previous name is
+retired. This is a display-name change only — the OLM package name, the image repository paths and
+the bundle coordinates are unchanged, so existing installations and automation are unaffected.
+
+The catalog entry also carries a neutral product icon in place of the upstream project logo.
 
 ---
 
