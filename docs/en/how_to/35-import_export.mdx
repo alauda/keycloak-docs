@@ -77,7 +77,7 @@ curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
 The `KeycloakRealmImport` CRD is the preferred method for initial Realm provisioning in Kubernetes deployments. See [Manage Realms](../functions/20-manage_realms.mdx) for details.
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:
   name: my-realm-import

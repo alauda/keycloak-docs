@@ -11,15 +11,21 @@ The `KeycloakRealmImport` Custom Resource enables declarative, GitOps-friendly m
 | Property | Value |
 |:---------|:------|
 | **API Group** | `k8s.keycloak.org` |
-| **API Version** | `v2alpha1` |
+| **API Version** | `v2beta1` |
 | **Kind** | `KeycloakRealmImport` |
 | **Plural** | `keycloakrealmimports` |
 | **Scope** | Namespaced |
 
+<Directive type="note" title="API version">
+`v2beta1` is the storage version and the one to use. `v2alpha1` is still served for compatibility
+but is marked deprecated in the CRD, and resources written as `v2alpha1` are converted and stored as
+`v2beta1`.
+</Directive>
+
 ## Example
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:
   name: my-realm-import

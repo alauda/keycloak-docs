@@ -45,7 +45,7 @@ kubectl get secret keycloak-tls-secret -n <namespace>
 Update your `Keycloak` CR to enable Ingress with TLS and configure the hostname:
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: Keycloak
 metadata:
   name: example-kc

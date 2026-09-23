@@ -21,7 +21,7 @@ You can create a Keycloak instance to provide centralized identity and access ma
     Create a Keycloak instance via CLI:
 
     ```yaml
-    apiVersion: k8s.keycloak.org/v2alpha1
+    apiVersion: k8s.keycloak.org/v2beta1
     kind: Keycloak
     metadata:
       name: example-kc
@@ -103,7 +103,7 @@ High-availability deployments require a highly available PostgreSQL backend. Ens
 </Directive>
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: Keycloak
 metadata:
   name: example-kc-ha

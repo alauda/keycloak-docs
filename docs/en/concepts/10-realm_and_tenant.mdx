@@ -58,7 +58,7 @@ Multiple tenants share a single Realm, and tenants are separated using Keycloak 
 In Alauda Application Services Identity Management E1, Realm configurations can be managed declaratively using the `KeycloakRealmImport` Custom Resource. This enables GitOps-style management of Realm definitions.
 
 ```yaml
-apiVersion: k8s.keycloak.org/v2alpha1
+apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:
   name: my-realm-import
