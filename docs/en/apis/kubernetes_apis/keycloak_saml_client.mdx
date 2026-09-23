@@ -1,0 +1,93 @@
+---
+weight: 40
+---
+
+# KeycloakSAMLClient
+
+The `KeycloakSAMLClient` Custom Resource declares a SAML 2.0 client in a realm of a running
+Keycloak™ instance. It is the SAML counterpart of [`KeycloakOIDCClient`](./keycloak_oidc_client.mdx):
+same shape, same reconciliation, a client representation carrying SAML's signing and binding
+options instead of OIDC's redirect and origin settings.
+
+New in 26.7.
+
+## Resource Information
+
+| Property | Value |
+|:---------|:------|
+| **API Group** | `k8s.keycloak.org` |
+| **API Version** | `v2alpha1` |
+| **Kind** | `KeycloakSAMLClient` |
+| **Plural** | `keycloaksamlclients` |
+| **Scope** | Namespaced |
+
+<Directive type="note" title="API version">
+`v2alpha1` is the storage version for this resource. Unlike `Keycloak` and `KeycloakRealmImport`,
+which moved to `v2beta1`, this resource has only ever had `v2alpha1`.
+</Directive>
+
+## Example
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakSAMLClient
+metadata:
+  name: my-saml-app
+  namespace: keycloak
+spec:
+  keycloakCRName: example-kc
+  realm: my-realm
+  client:
+    displayName: My SAML Application
+    enabled: true
+    appUrl: https://app.example.com
+    redirectUris:
+      - https://app.example.com/saml/acs
+    nameIdFormat: username
+    forcePostBinding: true
+    signDocuments: true
+    clientSignatureRequired: true
+```
+
+## Spec
+
+All three top-level fields are required.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `keycloakCRName` | string | The name of the `Keycloak` resource to act against, **in the same namespace**. |
+| `realm` | string | The realm the client belongs to. |
+| `client` | object | The client itself. See below. |
+
+### `spec.client`
+
+Shared with the OIDC client: `displayName`, `description`, `enabled`, `appUrl`, `redirectUris`,
+`roles`, `createdTimestamp`, `updatedTimestamp`.
+
+SAML-specific:
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `nameIdFormat` | string | NameID format presented in assertions. |
+| `forceNameIdFormat` | boolean | Ignore the format requested by the service provider and use `nameIdFormat`. |
+| `forcePostBinding` | boolean | Always respond with HTTP-POST binding rather than Redirect. |
+| `includeAuthnStatement` | boolean | Include an AuthnStatement in the assertion. |
+| `frontChannelLogout` | boolean | Perform logout through the front channel. |
+| `allowEcpFlow` | boolean | Permit the SAML ECP profile. |
+| `signDocuments` | boolean | Sign the SAML response document. |
+| `signAssertions` | boolean | Sign the assertion inside the response. |
+| `clientSignatureRequired` | boolean | Require the client to sign its requests. |
+| `signingCertificate` | string | Certificate used to validate the client's signatures. |
+| `signatureAlgorithm` | string | Algorithm used for signing. |
+| `signatureCanonicalizationMethod` | string | XML canonicalization method used for signing. |
+
+## Status
+
+Identical in shape to `KeycloakOIDCClient`: `conditions`, `uuid`, `hash`, `observedGeneration`.
+
+The full schema, including every nested field, is rendered in the generated API reference from the
+resource's CRD.
+
+---
+
+Keycloak™ is a trademark of The Linux Foundation. Alauda is an independent vendor. This product is not affiliated with, endorsed by, or sponsored by The Linux Foundation. All trademarks are the property of their respective owners and are used here for identification purposes only.

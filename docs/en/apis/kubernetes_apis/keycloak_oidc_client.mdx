@@ -1,0 +1,91 @@
+---
+weight: 30
+---
+
+# KeycloakOIDCClient
+
+The `KeycloakOIDCClient` Custom Resource declares an OpenID Connect client in a realm of a running
+Keycloak™ instance. The Operator reconciles it against that instance's Admin API, so a client can be
+managed declaratively alongside the workload that uses it instead of being created by hand in the
+Admin Console.
+
+New in 26.7.
+
+## Resource Information
+
+| Property | Value |
+|:---------|:------|
+| **API Group** | `k8s.keycloak.org` |
+| **API Version** | `v2alpha1` |
+| **Kind** | `KeycloakOIDCClient` |
+| **Plural** | `keycloakoidcclients` |
+| **Scope** | Namespaced |
+
+<Directive type="note" title="API version">
+`v2alpha1` is the storage version for this resource. Unlike `Keycloak` and `KeycloakRealmImport`,
+which moved to `v2beta1`, this resource has only ever had `v2alpha1`.
+</Directive>
+
+## Example
+
+```yaml
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: my-app
+  namespace: keycloak
+spec:
+  keycloakCRName: example-kc
+  realm: my-realm
+  client:
+    displayName: My Application
+    description: OIDC client for my application
+    enabled: true
+    appUrl: https://app.example.com
+    redirectUris:
+      - https://app.example.com/callback
+    webOrigins:
+      - https://app.example.com
+```
+
+## Spec
+
+All three top-level fields are required.
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `keycloakCRName` | string | The name of the `Keycloak` resource to act against, **in the same namespace**. |
+| `realm` | string | The realm the client belongs to. |
+| `client` | object | The client itself. See below. |
+
+### `spec.client`
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `displayName` | string | Human-readable name shown in the Admin Console. |
+| `description` | string | Free-text description. |
+| `enabled` | boolean | Whether the client may be used. |
+| `appUrl` | string | Base URL of the application. |
+| `redirectUris` | array | Permitted redirect URIs after authentication. |
+| `webOrigins` | array | Permitted CORS origins. |
+| `auth` | object | Client authentication settings. |
+| `loginFlows` | object | Authentication flow bindings for this client. |
+| `roles` | array | Client roles to create. |
+| `serviceAccountRoles` | array | Roles granted to the client's service account. |
+| `createdTimestamp` / `updatedTimestamp` | string | Set by the Operator; not for you to write. |
+
+## Status
+
+| Field | Type | Description |
+|:------|:-----|:------------|
+| `conditions` | array | Standard Kubernetes conditions describing reconciliation. |
+| `uuid` | string | The client's id in Keycloak™, assigned on creation. |
+| `hash` | string | Hash of the last applied spec, used to detect drift. |
+| `observedGeneration` | integer | The `metadata.generation` this status refers to. |
+
+The full schema, including every nested field, is rendered in the generated API reference from the
+resource's CRD.
+
+---
+
+Keycloak™ is a trademark of The Linux Foundation. Alauda is an independent vendor. This product is not affiliated with, endorsed by, or sponsored by The Linux Foundation. All trademarks are the property of their respective owners and are used here for identification purposes only.
